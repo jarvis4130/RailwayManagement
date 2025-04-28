@@ -1,0 +1,37 @@
+<div class="max-w-md mx-auto mt-16">
+    <h2 class="text-2xl font-bold mb-4">Register</h2>
+  
+    <form [formGroup]="registerForm" (ngSubmit)="onSubmit()">
+      <div class="mb-4">
+        <label class="block font-medium">Username</label>
+        <input formControlName="username" class="border p-2 w-full" />
+      </div>
+  
+      <div class="mb-4">
+        <label class="block font-medium">Email</label>
+        <input formControlName="email" type="email" class="border p-2 w-full" />
+      </div>
+  
+      <div class="mb-4">
+        <label class="block font-medium">Password</label>
+        <input formControlName="password" type="password" class="border p-2 w-full" />
+      </div>
+  
+      <div class="mb-4">
+        <label class="block font-medium">Confirm Password</label>
+        <input formControlName="confirmPassword" type="password" class="border p-2 w-full" />
+      </div>
+  
+      <div class="mb-4">
+        <label class="block font-medium">Aadhar Number</label>
+        <input formControlName="aadharNumber" class="border p-2 w-full" />
+      </div>
+  
+      <div *ngIf="errorMessage" class="text-red-600 mb-4">{{ errorMessage }}</div>
+  
+      <button type="submit" class="bg-[#213d77] text-white px-4 py-2 w-full">
+        Register
+      </button>
+    </form>
+  </div>
+  

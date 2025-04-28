@@ -1,0 +1,33 @@
+<div class="max-w-md mx-auto mt-16">
+  <h2 class="text-2xl font-bold mb-4">Login</h2>
+
+  <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
+    <div class="mb-4">
+      <label class="block font-medium">Username</label>
+      <input formControlName="username" class="border p-2 w-full" />
+    </div>
+
+    <div class="mb-4">
+      <label class="block font-medium">Password</label>
+      <input
+        type="password"
+        formControlName="password"
+        class="border p-2 w-full"
+      />
+    </div>
+
+    <div *ngIf="errorMessage" class="text-red-600 mb-4">{{ errorMessage }}</div>
+
+    <button type="submit" class="bg-[#213d77] text-white px-4 py-2 w-full">
+      Login
+    </button>
+  </form>
+</div>
+
+<!-- {
+    "username": "atharvaadam1234",
+    "email": "atharvaadam413@gmail.com",
+    "password": "Atharva@1234",
+    "confirmPassword": "Atharva@1234",
+    "aadharNumber": "839198075620"
+  } -->

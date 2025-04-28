@@ -1,0 +1,61 @@
+<nav class="fixed top-0 left-0 w-full p-4 shadow z-50 bg-white">
+  <div class="grid grid-cols-3 items-center">
+    <!-- Left: Logo -->
+    <div class="flex justify-start">
+      <a routerLink="/home">
+        <img
+          src="logo.png"
+          alt="App Logo"
+          class="w-16 h-16 object-contain ml-10"
+        />
+      </a>
+    </div>
+
+    <!-- Center: Links and Date -->
+    <div class="flex justify-center text-sm font-medium">
+      <div
+        class="flex flex-wrap justify-center items-center gap-x-6 gap-y-1 max-w-[600px]"
+      >
+        <!-- Conditionally show login/register OR logout -->
+        <div class="flex items-center">
+          <ng-container *ngIf="!isLoggedIn(); else loggedIn">
+            <a
+              routerLink="/login"
+              routerLinkActive="underline"
+              class="bg-[#213d77] text-white px-4 py-2 font-bold cursor-pointer"
+            >
+              Login
+            </a>
+            <a
+              routerLink="/signup"
+              routerLinkActive="underline"
+              class="px-4 py-2 hover:underline cursor-pointer"
+            >
+              Register
+            </a>
+          </ng-container>
+
+          <ng-template #loggedIn>
+            <button
+              (click)="logout()"
+              class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 font-bold rounded cursor-pointer"
+            >
+              Logout
+            </button>
+          </ng-template>
+        </div>
+
+        <span>Link 4</span>
+        <span>Link 5</span>
+        <span>{{ today | date : 'dd-MMM-yyyy' }}</span>
+        <span>More</span>
+        <span>More</span>
+      </div>
+    </div>
+
+    <!-- Right: IRCTC Logo -->
+    <div class="flex justify-end">
+      <img src="IRCTC-logo.png" alt="IRCTC Logo" class="w-28 h-16 mr-10" />
+    </div>
+  </div>
+</nav>

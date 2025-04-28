@@ -1,0 +1,106 @@
+<div class="p-6">
+  <!--  Search Bar -->
+  <div
+    class="flex flex-wrap justify-center items-center gap-4 mb-6 bg-[#213d77] p-6 rounded-lg shadow-lg"
+  >
+    <!-- Source Input -->
+    <div class="relative w-40">
+      <input
+        type="text"
+        [(ngModel)]="searchParams.source"
+        placeholder="Source"
+        class="border border-gray-300 p-2 pl-10 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+      />
+      <img
+        src="source.png"
+        alt="Source"
+        class="w-5 h-5 absolute top-3 left-3"
+      />
+    </div>
+
+    <!-- Destination Input -->
+    <div class="relative w-40">
+      <input
+        type="text"
+        [(ngModel)]="searchParams.destination"
+        placeholder="Destination"
+        class="border border-gray-300 p-2 pl-10 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+      />
+      <img
+        src="dest.png"
+        alt="Destination"
+        class="w-5 h-5 absolute top-3 left-3"
+      />
+    </div>
+
+    <!-- Journey Date -->
+    <div class="w-40">
+      <input
+        type="date"
+        [min]="today"
+        [(ngModel)]="searchParams.journeyDate"
+        class="border border-gray-300 p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+      />
+    </div>
+
+    <!-- Class Type -->
+    <div class="relative w-40">
+      <img src="class.png" alt="class" class="w-5 h-5 absolute top-3 left-3" />
+      <select
+        [(ngModel)]="searchParams.classTypeId"
+        class="border border-gray-300 p-2 pl-10 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+      >
+        <option value="" disabled>Select Class Type</option>
+        <option value="1">Sleeper</option>
+        <option value="2">AC 3 Tier</option>
+        <option value="3">AC 2 Tier</option>
+        <option value="4">First Class</option>
+      </select>
+    </div>
+
+    <!-- Search Button -->
+    <button
+      (click)="modifySearch()"
+      class="bg-orange-600 hover:bg-orange-700 text-white font-semibold px-4 py-2 rounded shadow"
+    >
+      Modify Search
+    </button>
+  </div>
+
+  <div *ngIf="trains.length === 0" class="text-gray-500 text-center mt-6">
+    No trains found.
+  </div>
+
+  <div *ngFor="let train of trains" class="border rounded-lg shadow p-6 mb-6">
+    <h2 class="text-2xl font-bold text-blue-800">{{ train.trainName }}</h2>
+    <p class="text-lg text-gray-700">
+      {{ train.source }} ➔ {{ train.destination }}
+    </p>
+    <p class="text-sm text-gray-500">
+      Departure: {{ train.departureTime }} | Arrival: {{ train.arrivalTime }} |
+      Duration: {{ train.durationMinutes }} mins
+    </p>
+
+    <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div
+        *ngFor="let seat of train.seatAvailability"
+        class="border p-4 rounded hover:bg-gray-100 transition"
+      >
+        <div class="flex justify-between items-center">
+          <div>
+            <p class="font-semibold">{{ seat.classType }}</p>
+            <p class="text-sm text-gray-500">
+              Seats Available: {{ seat.remainingSeats }}
+            </p>
+          </div>
+          <button
+            class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
+            (click)="bookTicket(train.trainId, seat.classType)"
+          >
+            Book Ticket
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
