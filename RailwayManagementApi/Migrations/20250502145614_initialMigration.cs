@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace RailwayManagementApi.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate : Migration
+    public partial class initialMigration : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -263,7 +263,7 @@ namespace RailwayManagementApi.Migrations
                 {
                     TicketID = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    Username = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    UserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     TrainID = table.Column<int>(type: "int", nullable: false),
                     SourceID = table.Column<int>(type: "int", nullable: false),
                     DestinationID = table.Column<int>(type: "int", nullable: false),
@@ -278,8 +278,8 @@ namespace RailwayManagementApi.Migrations
                 {
                     table.PrimaryKey("PK_Tickets", x => x.TicketID);
                     table.ForeignKey(
-                        name: "FK_Tickets_AspNetUsers_Username",
-                        column: x => x.Username,
+                        name: "FK_Tickets_AspNetUsers_UserId",
+                        column: x => x.UserId,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
@@ -398,10 +398,10 @@ namespace RailwayManagementApi.Migrations
                     TicketID = table.Column<int>(type: "int", nullable: false),
                     TrainID = table.Column<int>(type: "int", nullable: false),
                     ClassTypeID = table.Column<int>(type: "int", nullable: false),
+                    PassengerID = table.Column<int>(type: "int", nullable: false),
                     RequestDate = table.Column<DateTime>(type: "datetime2", nullable: false),
                     Position = table.Column<int>(type: "int", nullable: false),
-                    ClassTypeID1 = table.Column<int>(type: "int", nullable: true),
-                    TicketID1 = table.Column<int>(type: "int", nullable: true)
+                    ClassTypeID1 = table.Column<int>(type: "int", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -418,16 +418,17 @@ namespace RailwayManagementApi.Migrations
                         principalTable: "ClassTypes",
                         principalColumn: "ClassTypeID");
                     table.ForeignKey(
+                        name: "FK_WaitingLists_Passengers_PassengerID",
+                        column: x => x.PassengerID,
+                        principalTable: "Passengers",
+                        principalColumn: "PassengerID",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
                         name: "FK_WaitingLists_Tickets_TicketID",
                         column: x => x.TicketID,
                         principalTable: "Tickets",
                         principalColumn: "TicketID",
                         onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "FK_WaitingLists_Tickets_TicketID1",
-                        column: x => x.TicketID1,
-                        principalTable: "Tickets",
-                        principalColumn: "TicketID");
                     table.ForeignKey(
                         name: "FK_WaitingLists_Trains_TrainID",
                         column: x => x.TrainID,
@@ -527,9 +528,9 @@ namespace RailwayManagementApi.Migrations
                 column: "TrainID");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Tickets_Username",
+                name: "IX_Tickets_UserId",
                 table: "Tickets",
-                column: "Username");
+                column: "UserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_TrainSchedules_StationID",
@@ -552,14 +553,14 @@ namespace RailwayManagementApi.Migrations
                 column: "ClassTypeID1");
 
             migrationBuilder.CreateIndex(
+                name: "IX_WaitingLists_PassengerID",
+                table: "WaitingLists",
+                column: "PassengerID");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_WaitingLists_TicketID",
                 table: "WaitingLists",
                 column: "TicketID");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_WaitingLists_TicketID1",
-                table: "WaitingLists",
-                column: "TicketID1");
 
             migrationBuilder.CreateIndex(
                 name: "IX_WaitingLists_TrainID",
@@ -589,9 +590,6 @@ namespace RailwayManagementApi.Migrations
                 name: "Notifications");
 
             migrationBuilder.DropTable(
-                name: "Passengers");
-
-            migrationBuilder.DropTable(
                 name: "Payments");
 
             migrationBuilder.DropTable(
@@ -605,6 +603,9 @@ namespace RailwayManagementApi.Migrations
 
             migrationBuilder.DropTable(
                 name: "AspNetRoles");
+
+            migrationBuilder.DropTable(
+                name: "Passengers");
 
             migrationBuilder.DropTable(
                 name: "Tickets");

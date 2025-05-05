@@ -6,6 +6,8 @@ import { LoginComponent } from './pages/login/login.component';
 import { RegisterComponent } from './pages/register/register.component';
 import { SearchResultsComponent } from './pages/search-results/search-results.component';
 import { BookTicketComponent } from './pages/book-ticket/book-ticket.component';
+import { MyTicketComponent } from './pages/my-ticket/my-ticket.component';
+import { TicketDetailComponent } from './pages/ticket-detail/ticket-detail.component';
 
 export const routes: Routes = [
   {
@@ -36,6 +38,14 @@ export const routes: Routes = [
   { 
     path: 'book-ticket',
     component: BookTicketComponent
+  },
+  {
+    path:'my-ticket',
+    component:MyTicketComponent
+  },
+  {
+    path:'my-ticket/:id',
+    component:TicketDetailComponent
   },
   {
     path: '**',

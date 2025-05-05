@@ -30,7 +30,7 @@ builder.Services.AddScoped<ITicketService, TicketService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<ITrainService,TrainService>();
 builder.Services.AddScoped<IPayment, PaymentService>();
-// builder.Services.Configure<RazorpayOptions>(builder.Configuration.GetSection("Razorpay"));
+builder.Services.AddScoped<IStationService, StationService>();
 
 // JWT
 

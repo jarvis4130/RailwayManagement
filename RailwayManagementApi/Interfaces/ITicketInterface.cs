@@ -9,10 +9,10 @@ namespace RailwayManagementApi.Interfaces
     public interface ITicketService
     {
         Task<IActionResult> InitiateBookingAsync(TicketBookingRequestDTO booking);
-        Task<IActionResult> ConfirmBookingAsync(TicketBookingConfirmDTO booking);
+        Task<IActionResult> ConfirmBookingAsync(TicketBookingConfirmDTO booking,PaymentConfirmationDTO paymentDto);
         Task<IActionResult> ConfirmPaymentAndBookTicket(PaymentConfirmationDTO paymentDto);
-
         Task<IActionResult> CancelPassengerAsync(CancelPassengerDTO dto);
+        Task<IActionResult> GetTicketDetailsAsync(int ticketId);
     }
 
 }

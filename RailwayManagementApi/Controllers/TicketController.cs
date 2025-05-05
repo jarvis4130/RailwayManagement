@@ -5,10 +5,10 @@ using RailwayManagementApi.Data;
 using RailwayManagementApi.DTOs;
 using RailwayManagementApi.DTOs.PassengerDTO;
 using RailwayManagementApi.DTOs.TicketDTO;
-using RailwayManagementApi.Helper;
 using RailwayManagementApi.Interfaces;
 using RailwayManagementApi.Models;
-using Razorpay.Api;
+using Microsoft.AspNetCore.Identity;
+
 
 namespace RailwayManagementApi.Controllers
 {
@@ -19,12 +19,14 @@ namespace RailwayManagementApi.Controllers
         private readonly ITicketService _ticketService;
         private readonly RailwayContext _dbContext;
         private readonly INotificationService _notificationService;
+        private readonly UserManager<ApplicationUser> _userManager;
 
-        public TicketController(ITicketService ticketService, RailwayContext context, INotificationService notificationService)
+        public TicketController(ITicketService ticketService, RailwayContext context, INotificationService notificationService, UserManager<ApplicationUser> userManager)
         {
             _ticketService = ticketService;
             _dbContext = context;
             _notificationService = notificationService;
+            _userManager=userManager;
         }
 
         // {
@@ -45,7 +47,7 @@ namespace RailwayManagementApi.Controllers
         //   "hasInsurance": true
         // }
         [Authorize]
-        [HttpPost("initiate")]
+        [HttpPost("initiate")] //fare calculation and seat avalability
         public async Task<IActionResult> InitiateBookingAsync([FromBody] TicketBookingRequestDTO booking)
             => await _ticketService.InitiateBookingAsync(booking);
 
@@ -66,11 +68,17 @@ namespace RailwayManagementApi.Controllers
         //   "paymentMode": "RazorPay",
         //   "paidAmount": 286,
         //   "hasInsurance": true
+        // } 
+
+        // Response
+        // {
+        //   "message": "Ticket booked",
+        //   "ticketId": 338
         // }
-        [Authorize]
-        [HttpPost("confirm")]
-        public async Task<IActionResult> ConfirmBookingAsync([FromBody] TicketBookingConfirmDTO booking)
-            => await _ticketService.ConfirmBookingAsync(booking);
+        // [Authorize]
+        // [HttpPost("confirm")] //seat no
+        // public async Task<IActionResult> ConfirmBookingAsync([FromBody] TicketBookingConfirmDTO booking)
+        //     => await _ticketService.ConfirmBookingAsync(booking);
 
         [Authorize]
         [HttpPost("confirm-payment")]
@@ -110,6 +118,66 @@ namespace RailwayManagementApi.Controllers
         //         .FirstOrDefaultAsync();
         // }
 
+        [Authorize]
+        [HttpGet("details/{ticketId}")]
+        public async Task<IActionResult> GetTicketDetails(int ticketId)
+        {
+            return await _ticketService.GetTicketDetailsAsync(ticketId);
+        }
+
+        [Authorize]
+        [HttpPost("user-tickets")]
+        public async Task<IActionResult> GetUserTickets([FromBody] TicketRequestDto request)
+        {
+            var user = await _userManager.FindByNameAsync(request.Username);
+            if (user == null)
+                return NotFound("User not found");
+
+            var userId = user.Id;
+
+            var tickets = await _dbContext.Tickets
+                .Include(t => t.Passengers)
+                .Include(t => t.Train)
+                .Include(t => t.SourceStation)
+                .Include(t => t.DestinationStation)
+                .Include(t => t.ClassType)
+                .Where(t => t.UserId == userId)
+                .ToListAsync();
+
+            var schedules = await _dbContext.TrainSchedules.ToListAsync();
+
+            var response = tickets.Select(t =>
+            {
+                var departure = schedules.FirstOrDefault(s => s.TrainID == t.TrainID && s.StationID == t.SourceID);
+                var arrival = schedules.FirstOrDefault(s => s.TrainID == t.TrainID && s.StationID == t.DestinationID);
+
+                var departureTime = departure?.DepartureTime ?? DateTime.MinValue;
+                var arrivalTime = arrival?.ArrivalTime ?? DateTime.MinValue;
+                var durationMinutes = (int)(arrivalTime - departureTime).TotalMinutes;
+
+                return new
+                {
+                    t.TicketID,
+                    t.JourneyDate,
+                    t.BookingDate,
+                    t.Status,
+                    t.Fare,
+                    Class = t.ClassType.ClassName,
+                    Source = t.SourceStation.StationName,
+                    Destination = t.DestinationStation.StationName,
+                    DepartureTime = departureTime.ToString("HH:mm"),
+                    ArrivalTime = arrivalTime.ToString("HH:mm"),
+                    DurationMinutes = durationMinutes,
+                    Passengers = t.Passengers.Select(p => new
+                    {
+                        p.PassengerID,
+                        Info = $"{p.Name} ({p.Age}, {p.Gender})"
+                    }).ToList()
+                };
+            });
+
+            return Ok(response);
+        }
     }
 }
 

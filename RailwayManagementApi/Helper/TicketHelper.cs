@@ -87,12 +87,19 @@ namespace RailwayManagementApi.Helper
         }
         public async Task<decimal> CalculateFare(TicketBookingRequestDTO dto, TrainSchedule sourceSchedule, TrainSchedule destinationSchedule, int totalStops)
         {
-            var baseFare = await _dbContext.Tickets
-                .Where(t => t.TrainID == dto.TrainID
-                         && t.SourceID == dto.SourceID
-                         && t.DestinationID == dto.DestinationID)
-                .Select(t => t.Fare)
-                .FirstOrDefaultAsync();
+            if (sourceSchedule.SequenceOrder >= destinationSchedule.SequenceOrder)
+                throw new Exception("Invalid station sequence: destination must come after source.");
+
+            var baseFare = await _dbContext.TrainSchedules
+    .Where(ts => ts.TrainID == dto.TrainID && ts.StationID == dto.DestinationID)
+    .Select(ts => ts.Fair)
+    .FirstOrDefaultAsync();
+            // await _dbContext.Tickets
+            //     .Where(t => t.TrainID == dto.TrainID
+            //              && t.SourceID == dto.SourceID
+            //              && t.DestinationID == dto.DestinationID)
+            //     .Select(t => t.Fare)
+            //     .FirstOrDefaultAsync();
 
             if (baseFare == 0)
                 throw new Exception("Fare not available for the selected route.");
@@ -105,7 +112,7 @@ namespace RailwayManagementApi.Helper
                 _ => 1.0m
             };
 
-            decimal fare = baseFare * multiplier;
+            decimal fare =(decimal) baseFare * multiplier;
 
             if (dto.HasInsurance)
                 fare += dto.Passengers.Count * 20;

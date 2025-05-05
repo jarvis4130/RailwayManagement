@@ -16,7 +16,7 @@ namespace RailwayManagementApi.Data
             base.OnModelCreating(modelBuilder);
             modelBuilder.Entity<WaitingList>()
                 .HasOne(w => w.Ticket)
-                .WithMany()
+                .WithMany(t => t.WaitingLists)
                 .HasForeignKey(w => w.TicketID)
                 .OnDelete(DeleteBehavior.Restrict);
 
@@ -31,7 +31,13 @@ namespace RailwayManagementApi.Data
                 .WithMany()
                 .HasForeignKey(w => w.ClassTypeID)
                 .OnDelete(DeleteBehavior.Cascade);
-            
+
+            modelBuilder.Entity<WaitingList>()
+                .HasOne(w => w.Passenger)
+                .WithMany()
+                .HasForeignKey(w => w.PassengerID)
+                .OnDelete(DeleteBehavior.Restrict);
+
             modelBuilder.Entity<Ticket>()
                 .HasOne(t => t.SourceStation)
                 .WithMany()

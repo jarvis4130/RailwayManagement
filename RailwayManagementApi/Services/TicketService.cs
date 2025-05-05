@@ -17,10 +17,10 @@ namespace RailwayManagementApi.Services
         private readonly RailwayContext _dbContext;
         private readonly TicketHelper _ticketHelper;
         private readonly IConfiguration _config;
-        
-    private readonly INotificationService _notificationService;
 
-        public TicketService(INotificationService notificationService,RailwayContext dbContext, TicketHelper ticketHelper, IConfiguration config)
+        private readonly INotificationService _notificationService;
+
+        public TicketService(INotificationService notificationService, RailwayContext dbContext, TicketHelper ticketHelper, IConfiguration config)
         {
             _dbContext = dbContext;
             _ticketHelper = ticketHelper;
@@ -60,7 +60,7 @@ namespace RailwayManagementApi.Services
 
             return new OkObjectResult(new
             {
-                fare,
+                fare = fare * booking.Passengers.Count,
                 classTypeId = booking.ClassTypeID,
                 totalSeats,
                 availableSeats = remainingSeats,
@@ -69,7 +69,7 @@ namespace RailwayManagementApi.Services
             });
         }
 
-        public async Task<IActionResult> ConfirmBookingAsync(TicketBookingConfirmDTO booking)
+        public async Task<IActionResult> ConfirmBookingAsync(TicketBookingConfirmDTO booking, PaymentConfirmationDTO paymentDto)
         {
             var seatRecord = await _dbContext.SeatAvailabilities
                 .FirstOrDefaultAsync(sa => sa.TrainID == booking.TrainID
@@ -166,6 +166,7 @@ namespace RailwayManagementApi.Services
             {
                 TicketID = ticket.TicketID,
                 PaymentMode = booking.PaymentMode,
+                RazorpayPaymentId=paymentDto.RazorpayPaymentId, 
                 Amount = fare,
                 PaymentDate = DateTime.Now,
                 IsRefunded = false
@@ -203,7 +204,7 @@ namespace RailwayManagementApi.Services
                 return new BadRequestObjectResult("Invalid payment signature.");
             }
 
-            return await ConfirmBookingAsync(paymentDto.BookingInfo);
+            return await ConfirmBookingAsync(paymentDto.BookingInfo,paymentDto);
         }
 
 
@@ -221,6 +222,7 @@ namespace RailwayManagementApi.Services
 
             // Remove passenger
             _dbContext.Passengers.Remove(passenger);
+            await _dbContext.SaveChangesAsync();
 
             // Free seat
             var seat = await _dbContext.SeatAvailabilities.FirstOrDefaultAsync(sa =>
@@ -315,7 +317,9 @@ namespace RailwayManagementApi.Services
             if (!remaining.Any())
             {
                 ticket.Status = "Cancelled";
+                Console.WriteLine(ticket);
                 _dbContext.Tickets.Update(ticket);
+                await _dbContext.SaveChangesAsync();
             }
 
             // Refund logic (50% of this passenger’s fare)
@@ -324,6 +328,46 @@ namespace RailwayManagementApi.Services
 
             await _dbContext.SaveChangesAsync();
 
+            // refund logic
+            string key = _config["Razorpay:Key"];
+            string secret = _config["Razorpay:Secret"];
+
+
+            var payment = await _dbContext.Payments.FirstOrDefaultAsync(p => p.TicketID == ticket.TicketID);
+
+            if (payment != null && !string.IsNullOrEmpty(payment.RazorpayPaymentId) && !payment.IsRefunded)
+            {
+                try
+                {
+                    var razorpayClient = new RazorpayClient(key, secret);
+
+                    int refundAmountInPaise = (int)(refund * 100); // Razorpay expects paise
+
+                    var paymentObj = razorpayClient.Payment.Fetch(payment.RazorpayPaymentId);
+
+                    Dictionary<string, object> refundParams = new Dictionary<string, object>
+        {
+            { "amount", refundAmountInPaise },
+            { "notes", new Dictionary<string, string> { { "reason", "Passenger cancellation - 50% refund" } } }
+        };
+
+                    var refundResponse = paymentObj.Refund(refundParams);
+
+                    // Mark refund status
+                    payment.IsRefunded = true;
+                    _dbContext.Payments.Update(payment);
+                    await _dbContext.SaveChangesAsync();
+                }
+                catch (Exception ex)
+                {
+                    return new BadRequestObjectResult("Razorpay refund failed: " + ex.Message);
+                }
+            }
+            else
+            {
+                return new NotFoundObjectResult("Payment record not found or already refunded.");
+            }
+
             return new OkObjectResult(new
             {
                 Message = "Passenger cancelled.",
@@ -331,6 +375,130 @@ namespace RailwayManagementApi.Services
                 Currency = "INR",
                 Note = "50% refund as per cancellation policy."
             });
+        }
+
+
+        // public async Task<IActionResult> GetTicketDetailsAsync(int ticketId)
+        // {
+        //     var ticket = await _dbContext.Tickets
+        //         .Include(t => t.SourceStation)
+        //         .Include(t => t.DestinationStation)
+        //         .Include(t => t.ClassType)
+        //         .Include(t => t.Passengers)  // Include Passengers
+        //         .Include(t => t.WaitingLists) // Include WaitingLists
+        //         .FirstOrDefaultAsync(t => t.TicketID == ticketId);
+
+        //     if (ticket == null)
+        //         return new NotFoundObjectResult(new { message = "Ticket not found" });
+
+        //     var passengerInfo = new List<string>();
+
+        //     if (ticket.Status == "Booked")
+        //     {
+        //         passengerInfo = ticket.Passengers
+        //             .Select(p => $"{p.Name} - {p.SeatNumber}")
+        //             .ToList();
+        //     }
+        //     else if (ticket.Status == "Waiting")
+        //     {
+        //         passengerInfo = ticket.WaitingLists
+        //             .Select(w =>
+        //             {
+        //                 // Get the corresponding passenger for this ticket's WaitingList entry
+        //                 var passenger = ticket.Passengers.FirstOrDefault(p => p.TicketID == ticketId);
+        //                 return passenger != null ? $"{passenger.Name} - Waiting No: {w.Position}" : $"Waiting No: {w.Position}";
+        //             })
+        //             .ToList();
+        //     }
+
+        //     // Create DTO for ticket details
+        //     var ticketDetailsDto = new TicketDetailsDTO
+        //     {
+        //         Source = ticket.SourceStation.StationName,
+        //         Destination = ticket.DestinationStation.StationName,
+        //         BookingDate = ticket.BookingDate.ToString("yyyy-MM-dd"),
+        //         JourneyDate = ticket.JourneyDate.ToString("yyyy-MM-dd"),
+        //         Class = ticket.ClassType.ClassName,
+        //         Fare = ticket.Fare,
+        //         Status = ticket.Status,
+        //         PassengerInfo = passengerInfo // List now contains both booked passengers and waiting passengers with positions
+        //     };
+
+        //     return new OkObjectResult(ticketDetailsDto);
+        // }
+        public async Task<IActionResult> GetTicketDetailsAsync(int ticketId)
+        {
+            var ticket = await _dbContext.Tickets
+                .Include(t => t.SourceStation)
+                .Include(t => t.DestinationStation)
+                .Include(t => t.ClassType)
+                .Include(t => t.Passengers)
+                .Include(t => t.WaitingLists)
+                .Include(t => t.Train)
+                .FirstOrDefaultAsync(t => t.TicketID == ticketId);
+
+            if (ticket == null)
+                return new NotFoundObjectResult(new { message = "Ticket not found" });
+
+            // Fetch source & destination schedules
+            var sourceSchedule = await _dbContext.TrainSchedules
+                .FirstOrDefaultAsync(s => s.TrainID == ticket.TrainID && s.StationID == ticket.SourceID);
+
+            var destinationSchedule = await _dbContext.TrainSchedules
+                .FirstOrDefaultAsync(s => s.TrainID == ticket.TrainID && s.StationID == ticket.DestinationID);
+
+            string? departureTime = sourceSchedule?.DepartureTime.ToString("HH:mm");
+            string? arrivalTime = destinationSchedule?.ArrivalTime.ToString("HH:mm");
+            int? durationMinutes = null;
+
+            if (sourceSchedule != null && destinationSchedule != null)
+            {
+                durationMinutes = (int)(destinationSchedule.ArrivalTime - sourceSchedule.DepartureTime).TotalMinutes;
+            }
+
+            List<PassengerDisplayDTO> passengerInfo = new();
+
+            if (ticket.Status == "Booked")
+            {
+                passengerInfo = ticket.Passengers
+                    .Select(p => new PassengerDisplayDTO
+                    {
+                        PassengerID = p.PassengerID,
+                        Name = p.Name,
+                        Seat = p.SeatNumber
+                    }).ToList();
+            }
+            else if (ticket.Status == "Waiting")
+            {
+                passengerInfo = ticket.WaitingLists
+                    .Select(w =>
+                    {
+                        var passenger = ticket.Passengers.FirstOrDefault(p => p.PassengerID == w.PassengerID);
+                        return new PassengerDisplayDTO
+                        {
+                            PassengerID = passenger?.PassengerID ?? 0,
+                            Name = passenger?.Name ?? "Unknown",
+                            Seat = $"Waiting No: {w.Position}"
+                        };
+                    }).ToList();
+            }
+
+            var ticketDetailsDto = new TicketDetailsDTO
+            {
+                Source = ticket.SourceStation.StationName,
+                Destination = ticket.DestinationStation.StationName,
+                BookingDate = ticket.BookingDate.ToString("yyyy-MM-dd"),
+                JourneyDate = ticket.JourneyDate.ToString("yyyy-MM-dd"),
+                Class = ticket.ClassType.ClassName,
+                Fare = ticket.Fare,
+                Status = ticket.Status,
+                PassengerInfo = passengerInfo,
+                DepartureTime = departureTime,
+                ArrivalTime = arrivalTime,
+                DurationMinutes = durationMinutes
+            };
+
+            return new OkObjectResult(ticketDetailsDto);
         }
 
     }

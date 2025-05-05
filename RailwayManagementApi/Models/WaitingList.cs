@@ -19,16 +19,22 @@ namespace RailwayManagementApi.Models
         [Required]
         public int ClassTypeID { get; set; }
 
+        [Required]
+        public int PassengerID { get; set; } 
+
         public DateTime RequestDate { get; set; }
         public int Position { get; set; }
 
         [ForeignKey("TicketID")]
-        public Ticket Ticket { get; set; }=null!;
+        public Ticket Ticket { get; set; } = null!;
 
         [ForeignKey("TrainID")]
-        public Train Train { get; set; }=null!;
-        
+        public Train Train { get; set; } = null!;
+
         [ForeignKey("ClassTypeID")]
-        public ClassType ClassType { get; set; }=null!;
+        public ClassType ClassType { get; set; } = null!;
+
+        [ForeignKey("PassengerID")]
+        public Passenger Passenger { get; set; } = null!;
     }
 }

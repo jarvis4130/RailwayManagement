@@ -65,8 +65,15 @@ export class AuthService {
   getCurrentUser() {
     const token = localStorage.getItem('token');
     if (!token) return null;
+  
     const payload = this.decodeToken(token);
-    return payload ? { username: payload.sub, email: payload.email } : null;
+    console.log(payload);
+  
+    // Accessing claims using their URI-based keys
+    const username = payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name'];
+    const email = payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'];
+  
+    return username && email ? { username, email } : null;
   }
   
 }

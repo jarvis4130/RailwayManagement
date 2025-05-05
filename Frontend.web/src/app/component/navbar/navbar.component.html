@@ -45,9 +45,17 @@
           </ng-template>
         </div>
 
-        <span>Link 4</span>
+        <div>
+          <a
+            routerLink="/my-ticket"
+            routerLinkActive="underline"
+            class="cursor-pointer"
+          >
+            My Tickets
+          </a>
+        </div>
         <span>Link 5</span>
-        <span>{{ today | date : 'dd-MMM-yyyy' }}</span>
+        <span>{{ today | date : "dd-MMM-yyyy" }}</span>
         <span>More</span>
         <span>More</span>
       </div>

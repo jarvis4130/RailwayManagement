@@ -12,8 +12,8 @@ using RailwayManagementApi.Data;
 namespace RailwayManagementApi.Migrations
 {
     [DbContext(typeof(RailwayContext))]
-    [Migration("20250412090530_UpdateTicket")]
-    partial class UpdateTicket
+    [Migration("20250505065124_AddRazorpayPaymentIdToPayment")]
+    partial class AddRazorpayPaymentIdToPayment
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -335,6 +335,10 @@ namespace RailwayManagementApi.Migrations
                     b.Property<string>("PaymentMode")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("RazorpayPaymentId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("Status")
                         .HasColumnType("nvarchar(max)");
 
@@ -478,6 +482,9 @@ namespace RailwayManagementApi.Migrations
                     b.Property<int?>("ClassTypeID1")
                         .HasColumnType("int");
 
+                    b.Property<int>("PassengerID")
+                        .HasColumnType("int");
+
                     b.Property<int>("Position")
                         .HasColumnType("int");
 
@@ -485,9 +492,6 @@ namespace RailwayManagementApi.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<int>("TicketID")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("TicketID1")
                         .HasColumnType("int");
 
                     b.Property<int>("TrainID")
@@ -499,9 +503,9 @@ namespace RailwayManagementApi.Migrations
 
                     b.HasIndex("ClassTypeID1");
 
-                    b.HasIndex("TicketID");
+                    b.HasIndex("PassengerID");
 
-                    b.HasIndex("TicketID1");
+                    b.HasIndex("TicketID");
 
                     b.HasIndex("TrainID");
 
@@ -705,15 +709,17 @@ namespace RailwayManagementApi.Migrations
                         .WithMany("WaitingLists")
                         .HasForeignKey("ClassTypeID1");
 
-                    b.HasOne("Ticket", "Ticket")
+                    b.HasOne("RailwayManagementApi.Models.Passenger", "Passenger")
                         .WithMany()
-                        .HasForeignKey("TicketID")
+                        .HasForeignKey("PassengerID")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("Ticket", null)
+                    b.HasOne("Ticket", "Ticket")
                         .WithMany("WaitingLists")
-                        .HasForeignKey("TicketID1");
+                        .HasForeignKey("TicketID")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.HasOne("RailwayManagementApi.Models.Train", "Train")
                         .WithMany()
@@ -722,6 +728,8 @@ namespace RailwayManagementApi.Migrations
                         .IsRequired();
 
                     b.Navigation("ClassType");
+
+                    b.Navigation("Passenger");
 
                     b.Navigation("Ticket");
 

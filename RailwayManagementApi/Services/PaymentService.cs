@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Razorpay.Api;
 using RailwayManagementApi.Interfaces;
+using Newtonsoft.Json;
 
 namespace RailwayManagementApi.Services
 {
@@ -15,18 +16,22 @@ namespace RailwayManagementApi.Services
 
         public IActionResult CreateOrder(decimal amount)
         {
-            string key = _configuration["Razorpay:Key"];
-            string secret = _configuration["Razorpay:Secret"];
+            string key =  _configuration["Razorpay:Key"];
+            string secret =  _configuration["Razorpay:Secret"];
+
+            // Console.WriteLine(key + " " + secret);
 
             RazorpayClient client = new RazorpayClient(key, secret);
 
             Dictionary<string, object> options = new()
             {
-                { "amount", (int)(amount * 100) }, // amount in paise
+                { "amount", (int)(amount * 100) }, // amount in paise 
                 { "currency", "INR" },
                 { "receipt", $"rcpt_{DateTimeOffset.UtcNow.ToUnixTimeSeconds()}" },
                 { "payment_capture", 1 }
             };
+
+            // Console.WriteLine(JsonConvert.SerializeObject(options, Formatting.Indented));
 
             Order order = client.Order.Create(options);
 

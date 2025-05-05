@@ -1,0 +1,116 @@
+<div
+  *ngIf="ticket"
+  class="max-w-2xl mx-auto mt-10 bg-gradient-to-br from-white via-gray-50 to-gray-100 shadow-xl rounded-xl p-0 border border-gray-300 overflow-hidden font-sans"
+>
+  <!-- Header -->
+  <div class="bg-green-600 text-white text-center py-3 rounded-t-xl">
+    <h2 class="text-2xl font-bold">🎫 Booking Confirmed</h2>
+    <p class="text-sm tracking-wider mt-1">
+      Ticket ID: <span class="font-medium">#{{ ticketId }}</span>
+    </p>
+  </div>
+
+  <!-- Ticket Info -->
+  <div class="px-6 py-5 grid grid-cols-2 gap-4 text-sm md:text-base bg-white">
+    <p>
+      <span class="font-semibold text-gray-600">From:</span> {{ ticket.source }}
+    </p>
+    <p>
+      <span class="font-semibold text-gray-600">To:</span> {{ ticket.destination }}
+    </p>
+    <p>
+      <span class="font-semibold text-gray-600">Booking Date:</span> {{ ticket.bookingDate | date }}
+    </p>
+    <p>
+      <span class="font-semibold text-gray-600">Journey Date:</span> {{ ticket.journeyDate | date }}
+    </p>
+    <p>
+      <span class="font-semibold text-gray-600">Class:</span> {{ ticket.class }}
+    </p>
+    <p>
+      <span class="font-semibold text-gray-600">Fare:</span> ₹{{ ticket.fare }}
+    </p>
+    <p>
+      <span class="font-semibold text-gray-600">Departure:</span> {{ ticket.departureTime }}
+    </p>
+    <p>
+      <span class="font-semibold text-gray-600">Arrival:</span> {{ ticket.arrivalTime }}
+    </p>
+    <p>
+      <span class="font-semibold text-gray-600">Duration:</span> {{ ticket.durationMinutes }} mins
+    </p>
+    <p>
+      <span class="font-semibold text-gray-600">Status:</span>
+      <span
+        class="m-1 px-4 py-1  rounded-full text-white text-xs font-medium"
+        [ngClass]="{
+          'bg-green-500': ticket.status === 'Booked',
+          'bg-yellow-500': ticket.status === 'Waiting',
+          'bg-orange-500': ticket.status==='Cancelled'
+        }"
+      >
+        {{ ticket.status }}
+      </span>
+    </p>
+  </div>
+
+  <!-- Divider -->
+  <div class="border-t border-dashed border-gray-400 my-2 mx-6"></div>
+
+  <!-- Passengers -->
+  <div class="px-6 pb-6 pt-2 bg-white">
+    <h3 class="text-md font-semibold text-gray-800 mb-2">👤 Passenger(s)</h3>
+    <ul class="space-y-2">
+        <li
+        *ngFor="let p of ticket.passengerInfo"
+        class="flex justify-between items-center bg-gray-100 rounded p-2 text-gray-700"
+      >
+        <span>{{ p.name }} - {{ p.seat }}</span>
+        <button
+          class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-xs"
+          (click)="openModal((p.passengerID))"
+        >
+          Cancel
+        </button>
+      </li>
+      
+    </ul>
+  </div>
+</div>
+<!-- Confirmation Modal -->
+<!-- Modal Backdrop -->
+<div
+  class="fixed inset-0 bg-[rgba(255,255,255,0.27)] backdrop-blur-md flex items-center justify-center z-50"
+  *ngIf="showModal"
+>
+  <!-- Modal Content -->
+  <div
+    class="bg-white rounded-lg p-6 shadow-md w-full max-w-md text-center"
+  >
+    <h3 class="text-xl font-semibold mb-4">Confirm Cancellation</h3>
+    <p class="mb-6">Are you sure you want to cancel this passenger?</p>
+    <div class="flex justify-center space-x-4">
+      <button
+        class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition"
+        (click)="confirmCancel()"
+      >
+        Yes, Cancel
+      </button>
+      <button
+        class="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400 transition"
+        (click)="closeModal()"
+      >
+        No, Go Back
+      </button>
+    </div>
+  </div>
+</div>
+
+
+<!-- Loading State -->
+<div
+  *ngIf="!ticket"
+  class="flex justify-center items-center mt-10 text-gray-600"
+>
+  <p>Loading ticket details...</p>
+</div>

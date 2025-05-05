@@ -1,36 +1,123 @@
-<div class="max-w-md mx-auto mt-16">
-    <h2 class="text-2xl font-bold mb-4">Book Ticket</h2>
-  
-    <!-- Source and Destination Info -->
-    <div class="mb-4">
-      <p><strong>Source:</strong> {{ source }}</p>
-      <p><strong>Destination:</strong> {{ destination }}</p>
-      <p><strong>Journey Date:</strong> {{ journeyDate }}</p>
-      <p><strong>Class Type:</strong> {{ classType }}</p>
+
+<div class="mx-auto mt-16 p-8 max-w-4xl rounded-xl shadow-lg bg-gradient-to-br from-[#e0f2f1] to-[#f1f5f9]">
+  <h2 class="text-3xl font-bold mb-8 text-center text-[#213d77]">Ticket Details</h2>
+
+  <div class="mb-6 grid grid-cols-3 items-center gap-6 bg-white rounded-2xl p-6 border border-blue-300 shadow-sm">
+    <div class="text-center">
+      <p class="text-lg font-semibold text-gray-600">Source</p>
+      <p class="text-xl font-bold uppercase text-[#213d77]">{{ source }}</p>
     </div>
-  
-    <form (ngSubmit)="submitBooking()">
-      <!-- Insurance Section -->
-      <div class="mb-4">
-        <label class="block font-medium">Insurance</label>
-        <input type="checkbox" [(ngModel)]="insurance" name="insurance" />
-        <span class="ml-2">Would you like to add insurance?</span>
-      </div>
-  
-      <!-- Passenger List Section -->
-      <div class="mb-4">
-        <h3 class="text-lg font-semibold">Passengers</h3>
-        <div *ngFor="let passenger of passengers; let i = index" class="mb-2 flex items-center gap-4">
-          <!-- Display Name, Age, Gender in a Single Line -->
-          <input type="text" [(ngModel)]="passenger.name" name="passengerName{{i}}" placeholder="Name" class="border p-2 w-1/4" />
-          <input type="number" [(ngModel)]="passenger.age" name="passengerAge{{i}}" placeholder="Age" class="border p-2 w-1/4" />
-          <input type="text" [(ngModel)]="passenger.gender" name="passengerGender{{i}}" placeholder="Gender" class="border p-2 w-1/4" />
-          <button type="button" (click)="removePassenger(i)" class="bg-red-500 text-white px-4 py-2">Remove</button>
-        </div>
-        <button type="button" (click)="addPassenger()" class="bg-green-500 text-white px-4 py-2 mt-2">Add Passenger</button>
-      </div>
-  
-      <button type="submit" class="bg-[#213d77] text-white px-4 py-2 w-full">Confirm Booking</button>
-    </form>
+    <div class="text-center">
+      <img src="arrows.png" alt="Arrow icon" class="mx-auto w-10 h-10" />
+    </div>
+    <div class="text-center">
+      <p class="text-lg font-semibold text-gray-600">Destination</p>
+      <p class="text-xl font-bold uppercase text-[#213d77]">{{ destination }}</p>
+    </div>
   </div>
-  
+
+  <div class="mb-6 grid grid-cols-2 gap-4 bg-yellow-50 rounded-2xl p-6 border border-yellow-400 shadow-sm">
+    <div class="text-center">
+      <p class="text-lg font-semibold text-gray-600">Journey Date</p>
+      <p class="text-xl font-bold uppercase">{{ journeyDate }}</p>
+    </div>
+    <div class="text-center flex items-center justify-center gap-3">
+      <img src="class.png" alt="Class icon" class="h-8 w-8" />
+      <div>
+        <p class="text-lg font-semibold text-gray-600">Class Type</p>
+        <p class="text-xl font-bold uppercase">{{ classType }}</p>
+      </div>
+    </div>
+  </div>
+
+  <form (ngSubmit)="submitBooking()">
+    <div *ngIf="passengerError" class="text-red-600 text-center mb-4">
+      <p>{{ passengerError }}</p>
+    </div>
+
+    <div class="mb-6">
+      <h3 class="text-2xl font-semibold mb-4 text-[#213d77]">Passengers</h3>
+      <div
+        *ngFor="let passenger of passengers; let i = index"
+        class="mb-4 grid grid-cols-1 sm:grid-cols-4 gap-4 items-center"
+      >
+        <input
+          type="text"
+          [(ngModel)]="passenger.name"
+          name="passengerName{{ i }}"
+          placeholder="Name"
+          class="border border-gray-300 p-3 rounded-lg w-full focus:ring-2 focus:ring-[#213d77] focus:outline-none"
+        />
+        <input
+          type="number"
+          [(ngModel)]="passenger.age"
+          name="passengerAge{{ i }}"
+          placeholder="Age"
+          class="border border-gray-300 p-3 rounded-lg w-full focus:ring-2 focus:ring-[#213d77] focus:outline-none"
+        />
+        <select
+          [(ngModel)]="passenger.gender"
+          name="passengerGender{{ i }}"
+          class="border border-gray-300 p-3 rounded-lg w-full focus:ring-2 focus:ring-[#213d77] focus:outline-none"
+        >
+          <option value="" disabled selected>Select Gender</option>
+          <option value="Male">Male</option>
+          <option value="Female">Female</option>
+          <option value="Others">Others</option>
+        </select>
+        <button
+          type="button"
+          (click)="removePassenger(i)"
+          [disabled]="fareCalculated"
+          class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Remove
+        </button>
+      </div>
+
+      <button
+        type="button"
+        (click)="addPassenger()"
+        [disabled]="fareCalculated"
+        class="bg-green-600 text-white px-5 py-2 rounded-lg hover:bg-green-700 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        + Add Passenger
+      </button>
+    </div>
+
+    <div class="mb-6 flex items-center gap-3">
+      <input
+        type="checkbox"
+        [(ngModel)]="insurance"
+        name="insurance"
+        class="h-5 w-5"
+      />
+      <span class="text-lg text-gray-700 font-medium">Add insurance?</span>
+    </div>
+
+    <div class="flex justify-center items-center gap-4">
+      <div *ngIf="fareCalculated" class="w-full max-w-md text-center bg-green-100 border border-green-500 rounded-lg p-4">
+        <p class="text-xl font-bold text-green-700">Fare: ₹{{ fare }}.00/-</p>
+      </div>
+
+      <div class="w-full max-w-md">
+        <button
+          *ngIf="!fareCalculated"
+          type="button"
+          (click)="calculateFare()"
+          class="w-full bg-orange-500 text-white py-3 rounded-lg hover:bg-orange-600 transition duration-200"
+        >
+          Calculate Fare
+        </button>
+        <button
+          *ngIf="fareCalculated"
+          type="submit"
+          class="w-full bg-[#213d77] text-white p-4 rounded-lg hover:bg-[#1d4ed8] transition duration-200 cursor-pointer"
+        >
+          Confirm Booking
+        </button>
+      </div>
+    </div>
+  </form>
+</div>
+

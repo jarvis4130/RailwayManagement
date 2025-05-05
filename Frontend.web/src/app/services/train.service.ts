@@ -28,7 +28,7 @@ export interface TrainDTO {
   providedIn: 'root'
 })
 export class TrainService {
-  private apiUrl = 'http://localhost:5039/api/Train';  // Update if your backend URL is different
+  private apiUrl = 'http://localhost:5039/api/Train'; 
 
   constructor(private http: HttpClient) {}
 

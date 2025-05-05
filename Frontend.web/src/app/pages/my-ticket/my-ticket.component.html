@@ -1,0 +1,27 @@
+<div class="flex justify-center">
+  <div class="w-full max-w-2xl p-6">
+    <h2 class="text-2xl font-bold mb-4 text-center">🎫 Your Booked Tickets</h2>
+
+    <div *ngIf="tickets.length; else noTickets">
+      <div *ngFor="let t of tickets" (click)="viewTicket(t.ticketID)"
+           class="cursor-pointer bg-white shadow rounded-xl p-4 mb-4 border hover:shadow-md transition">
+        <div class="flex justify-between items-center">
+          <div>
+            <p class="font-semibold">{{ t.source }} → {{ t.destination }}</p>
+            <p class="text-sm text-gray-500">Journey Date : {{ t.journeyDate | date }}</p>
+          </div>
+          <span [ngClass]="{
+            'bg-green-500': t.status === 'Booked',
+            'bg-yellow-500': t.status === 'Waiting',
+            'bg-orange-500': t.status==='Cancelled'
+          }"
+            class="text-white px-3 py-1 rounded-full text-sm">{{ t.status }}</span>
+        </div>
+      </div>
+    </div>
+
+    <ng-template #noTickets>
+      <p class="text-center text-gray-500">You have no tickets yet.</p>
+    </ng-template>
+  </div>
+</div>

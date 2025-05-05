@@ -90,7 +90,47 @@ namespace RailwayManagementApi.Services
                     await _dbContext.ClassTypes.Where(c => c.ClassTypeID == searchDto.ClassTypeId.Value).ToListAsync()
                     : await _dbContext.ClassTypes.ToListAsync();
 
+                // var seatAvailabilityList = new List<SeatAvailabilityDTO>();
+
+                // foreach (var classType in classTypes)
+                // {
+                //     var availability = await _dbContext.SeatAvailabilities
+                //         .FirstOrDefaultAsync(sa =>
+                //             sa.TrainID == item.Train.TrainID &&
+                //             sa.Date.Date == journeyDate.Date &&
+                //             sa.ClassTypeID == classType.ClassTypeID);
+
+                //     int remainingSeats = availability?.RemainingSeats ?? 0;
+
+                //     int waitingCount = await _dbContext.WaitingLists
+                //         .Where(w =>
+                //             w.TrainID == item.Train.TrainID &&
+                //             w.ClassTypeID == classType.ClassTypeID &&
+                //             w.RequestDate.Date == journeyDate.Date)
+                //         .CountAsync();
+
+                //     seatAvailabilityList.Add(new SeatAvailabilityDTO
+                //     {
+                //         ClassType = classType.ClassName,
+                //         RemainingSeats = remainingSeats,
+                //         WaitingListCount = waitingCount
+                //     });
+                // }
+
+                // result.Add(new TrainDTO
+                // {
+                //     TrainId = item.Train.TrainID,
+                //     TrainName = item.Train.TrainName,
+                //     Source = searchDto.Source,
+                //     Destination = searchDto.Destination,
+                //     DepartureTime = item.SourceSchedule.DepartureTime.TimeOfDay,
+                //     ArrivalTime = item.DestinationSchedule.ArrivalTime.TimeOfDay,
+                //     DurationMinutes = (int)duration,
+                //     JourneyDate = journeyDate,
+                //     SeatAvailability = seatAvailabilityList
+                // });
                 var seatAvailabilityList = new List<SeatAvailabilityDTO>();
+                bool hasAnyAvailability = false;
 
                 foreach (var classType in classTypes)
                 {
@@ -100,7 +140,10 @@ namespace RailwayManagementApi.Services
                             sa.Date.Date == journeyDate.Date &&
                             sa.ClassTypeID == classType.ClassTypeID);
 
-                    int remainingSeats = availability?.RemainingSeats ?? 0;
+                    if (availability == null)
+                        continue;
+
+                    hasAnyAvailability = true;
 
                     int waitingCount = await _dbContext.WaitingLists
                         .Where(w =>
@@ -112,10 +155,13 @@ namespace RailwayManagementApi.Services
                     seatAvailabilityList.Add(new SeatAvailabilityDTO
                     {
                         ClassType = classType.ClassName,
-                        RemainingSeats = remainingSeats,
+                        RemainingSeats = availability.RemainingSeats,
                         WaitingListCount = waitingCount
                     });
                 }
+
+                if (!hasAnyAvailability)
+                    continue;
 
                 result.Add(new TrainDTO
                 {
@@ -129,6 +175,7 @@ namespace RailwayManagementApi.Services
                     JourneyDate = journeyDate,
                     SeatAvailability = seatAvailabilityList
                 });
+
             }
 
             return result;
