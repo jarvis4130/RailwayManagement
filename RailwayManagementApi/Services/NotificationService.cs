@@ -2,6 +2,8 @@
 using System.Net;
 using System.Net.Mail;
 using RailwayManagementApi.Interfaces;
+using SendGrid;
+using SendGrid.Helpers.Mail;
 
 public class NotificationService : INotificationService
 {
@@ -11,35 +13,38 @@ public class NotificationService : INotificationService
     {
         _config = config;
     }
-    public async Task SendEmailAsync(string toEmail, string subject, string body)
+
+    public async Task SendResetEmailAsync(string toEmail, string token)
     {
-        try
-        {
-            var smtpClient = new SmtpClient(_config["Email:Smtp"])
-            {
-                Port = int.Parse(_config["Email:Port"]),
-                Credentials = new NetworkCredential(_config["Email:Username"], _config["Email:Password"]),
-                EnableSsl = true
-            };
+        var clientAppUrl = _config["ClientAppUrl"];
+        var resetLink = $"{clientAppUrl}/reset-password?token={token}";
 
-            var mailMessage = new MailMessage
-            {
-                From = new MailAddress(_config["Email:From"]),
-                Subject = subject,
-                Body = body,
-                IsBodyHtml = true,
-            };
-            mailMessage.To.Add(toEmail);
+        string subject = "Reset Your Password";
+        string body = $@"
+        <p>Hello,</p>
+        <p>You requested a password reset. Click the link below to reset your password:</p>
+        <p><a href='{resetLink}'>Reset Password</a></p>
+        <p>If you did not request this, please ignore this email.</p>
+        <p>Regards,<br/>Railway Management</p>";
 
-            await smtpClient.SendMailAsync(mailMessage);
-        }
-        catch (Exception ex)
-        {
-            // Log to file or console for now
-            Console.WriteLine($"Email send failed: {ex.Message}");
-            throw;
-        }
+        await SendEmailAsync(toEmail, subject, body);
     }
 
 
+    public async Task SendEmailAsync(string toEmail, string subject, string body)
+    {
+        var apiKey = _config["SendGrid:ApiKey"];
+        var client = new SendGridClient(apiKey);
+        var from = new EmailAddress(_config["SendGrid:From"], "Railway Management");
+        var to = new EmailAddress(toEmail);
+        var msg = MailHelper.CreateSingleEmail(from, to, subject, plainTextContent: null, htmlContent: body);
+        var response = await client.SendEmailAsync(msg);
+
+        if ((int)response.StatusCode >= 400)
+        {
+            var responseBody = await response.Body.ReadAsStringAsync();
+            Console.WriteLine($"Email send failed: {response.StatusCode}\n{responseBody}");
+            throw new Exception("SendGrid email send failed.");
+        }
+    }
 }

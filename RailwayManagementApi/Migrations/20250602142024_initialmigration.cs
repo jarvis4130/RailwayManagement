@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace RailwayManagementApi.Migrations
 {
     /// <inheritdoc />
-    public partial class initialMigration : Migration
+    public partial class initialmigration : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -371,12 +371,13 @@ namespace RailwayManagementApi.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     TicketID = table.Column<int>(type: "int", nullable: false),
                     Amount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    RazorpayPaymentId = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    IsRefunded = table.Column<bool>(type: "bit", nullable: false),
                     PaymentDate = table.Column<DateTime>(type: "datetime2", nullable: false),
                     PaymentMode = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Status = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     IncludesInsurance = table.Column<bool>(type: "bit", nullable: false),
-                    InsuranceAmount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    IsRefunded = table.Column<bool>(type: "bit", nullable: false)
+                    InsuranceAmount = table.Column<decimal>(type: "decimal(18,2)", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -411,7 +412,7 @@ namespace RailwayManagementApi.Migrations
                         column: x => x.ClassTypeID,
                         principalTable: "ClassTypes",
                         principalColumn: "ClassTypeID",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_WaitingLists_ClassTypes_ClassTypeID1",
                         column: x => x.ClassTypeID1,
@@ -422,7 +423,7 @@ namespace RailwayManagementApi.Migrations
                         column: x => x.PassengerID,
                         principalTable: "Passengers",
                         principalColumn: "PassengerID",
-                        onDelete: ReferentialAction.Restrict);
+                        onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_WaitingLists_Tickets_TicketID",
                         column: x => x.TicketID,
@@ -434,6 +435,28 @@ namespace RailwayManagementApi.Migrations
                         column: x => x.TrainID,
                         principalTable: "Trains",
                         principalColumn: "TrainID",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Refunds",
+                columns: table => new
+                {
+                    RefundID = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    PaymentID = table.Column<int>(type: "int", nullable: false),
+                    RazorpayRefundId = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Amount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    RefundedOn = table.Column<DateTime>(type: "datetime2", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Refunds", x => x.RefundID);
+                    table.ForeignKey(
+                        name: "FK_Refunds_Payments_PaymentID",
+                        column: x => x.PaymentID,
+                        principalTable: "Payments",
+                        principalColumn: "PaymentID",
                         onDelete: ReferentialAction.Cascade);
                 });
 
@@ -496,6 +519,11 @@ namespace RailwayManagementApi.Migrations
                 table: "Payments",
                 column: "TicketID",
                 unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Refunds_PaymentID",
+                table: "Refunds",
+                column: "PaymentID");
 
             migrationBuilder.CreateIndex(
                 name: "IX_SeatAvailabilities_ClassTypeID",
@@ -590,7 +618,7 @@ namespace RailwayManagementApi.Migrations
                 name: "Notifications");
 
             migrationBuilder.DropTable(
-                name: "Payments");
+                name: "Refunds");
 
             migrationBuilder.DropTable(
                 name: "SeatAvailabilities");
@@ -603,6 +631,9 @@ namespace RailwayManagementApi.Migrations
 
             migrationBuilder.DropTable(
                 name: "AspNetRoles");
+
+            migrationBuilder.DropTable(
+                name: "Payments");
 
             migrationBuilder.DropTable(
                 name: "Passengers");

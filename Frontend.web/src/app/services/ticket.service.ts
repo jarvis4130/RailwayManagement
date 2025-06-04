@@ -35,6 +35,7 @@ export class TicketService {
   }
 
   initiateBooking(payload: any): Observable<any> {
+    console.log(payload);
     return this.http.post(`${this.apiUrl}/initiate`, payload, {
       headers: this.getHeaders(),
     });
@@ -63,6 +64,12 @@ export class TicketService {
   getTicketById(ticketId: number): Observable<any> {
     return this.http.get(`${this.apiUrl}/details/${ticketId}`, {
       headers: this.getHeaders(),
+    });
+  }
+
+  cancelTicket(body:any):Observable<any>{
+    return this.http.post<any>(`${this.apiUrl}/cancel-passenger`, body,{
+      headers:this.getHeaders(),
     });
   }
 }

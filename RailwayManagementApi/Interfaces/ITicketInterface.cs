@@ -11,7 +11,8 @@ namespace RailwayManagementApi.Interfaces
         Task<IActionResult> InitiateBookingAsync(TicketBookingRequestDTO booking);
         Task<IActionResult> ConfirmBookingAsync(TicketBookingConfirmDTO booking,PaymentConfirmationDTO paymentDto);
         Task<IActionResult> ConfirmPaymentAndBookTicket(PaymentConfirmationDTO paymentDto);
-        Task<IActionResult> CancelPassengerAsync(CancelPassengerDTO dto);
+        // Task<IActionResult> CancelPassengerAsync(CancelPassengerDTO dto);
+         Task<CancelPassengerResult> CancelPassengerAsync(CancelPassengerDTO dto);
         Task<IActionResult> GetTicketDetailsAsync(int ticketId);
     }
 

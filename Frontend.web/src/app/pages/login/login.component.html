@@ -18,6 +18,15 @@
 
     <div *ngIf="errorMessage" class="text-red-600 mb-4">{{ errorMessage }}</div>
 
+    <div class="text-right mt-2">
+      <a
+        (click)="goToForgotPassword()"
+        class="text-gray-600 hover:underline hover:text-blue-800 transition duration-150 ease-in-out cursor-pointer "
+      >
+        Forgot Password?
+      </a>
+    </div>
+
     <button type="submit" class="bg-[#213d77] text-white px-4 py-2 w-full">
       Login
     </button>
@@ -28,6 +37,6 @@
     "username": "atharvaadam1234",
     "email": "atharvaadam413@gmail.com",
     "password": "Atharva@1234",
-    "confirmPassword": "Atharva@1234",
+    "confirmPassword": "Atharva@1234", Atharva@12345
     "aadharNumber": "839198075620"
   } -->

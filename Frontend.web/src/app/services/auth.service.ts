@@ -30,6 +30,15 @@ export class AuthService {
     return this.http.post<AuthResponseDTO>(`${this.apiUrl}/register`, data);
   }
 
+  forgotPassword(email:string):Observable<any>{
+    return this.http.post(`${this.apiUrl}/forgot-password`, { email },{ responseType: 'text' });
+  }
+
+  resetPassword(payload:any):Observable<any>{
+    console.log(payload)
+    return this.http.post(`${this.apiUrl}/reset-password`, payload ,{ responseType: 'text' });
+  }
+
   isLoggedIn(): boolean {
     const token = localStorage.getItem('token');
     if (!token) {
@@ -72,8 +81,18 @@ export class AuthService {
     // Accessing claims using their URI-based keys
     const username = payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name'];
     const email = payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'];
+    const role=payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'];
   
-    return username && email ? { username, email } : null;
+    return username && email && role ? { username, email, role } : null;
+  }
+
+  isAdmin(): boolean {
+    const user = this.getCurrentUser();
+    return user?.role === 'Admin';
+  }
+
+  logout() {
+    localStorage.clear();
   }
   
 }

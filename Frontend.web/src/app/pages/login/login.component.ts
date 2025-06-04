@@ -20,7 +20,7 @@ export class LoginComponent {
       password: ['', Validators.required],
     });
   }
-
+  
   onSubmit() {
     if (this.loginForm.invalid) return;
   
@@ -28,18 +28,26 @@ export class LoginComponent {
       next: (res) => {
         localStorage.setItem('token', res.token);
   
+        const user = this.auth.getCurrentUser(); // get role from decoded token
+  
         const returnUrl = localStorage.getItem('returnUrl');
         if (returnUrl) {
-          localStorage.removeItem('returnUrl'); // Important: clear it
+          localStorage.removeItem('returnUrl');
           this.router.navigateByUrl(returnUrl);
+        } else if (user?.role === 'Admin') {
+          this.router.navigate(['/admin/dashboard']);
         } else {
           this.router.navigate(['/home']);
         }
       },
       error: (err) => {
         this.errorMessage = err.error?.error || 'Login failed';
-      },
+      }
     });
+  }
+  
+  goToForgotPassword(){
+    this.router.navigate(['/forgot-password']);
   }
   
 }

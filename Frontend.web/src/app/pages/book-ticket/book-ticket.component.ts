@@ -64,7 +64,7 @@ export class BookTicketComponent implements OnInit {
   fetchStationIDs(source: string, destination: string) {
     this.stationService.getStationIdByName(source).subscribe({
       next: (response) => {
-        this.sourceID = response; // Assuming the response contains 'id'
+        this.sourceID = response.stationID; // Assuming the response contains 'id'
       },
       error: (error) => {
         console.error('Error fetching source station ID:', error);
@@ -73,7 +73,7 @@ export class BookTicketComponent implements OnInit {
 
     this.stationService.getStationIdByName(destination).subscribe({
       next: (response) => {
-        this.destinationID = response; // Assuming the response contains 'id'
+        this.destinationID = response.stationID; // Assuming the response contains 'id'
       },
       error: (error) => {
         console.error('Error fetching destination station ID:', error);
@@ -129,7 +129,7 @@ export class BookTicketComponent implements OnInit {
     };
 
     this.loading = true;
-
+    console.log(requestBody);
     this.ticketService.initiateBooking(requestBody).subscribe({
       next: (response) => {
         this.fare = response.fare;

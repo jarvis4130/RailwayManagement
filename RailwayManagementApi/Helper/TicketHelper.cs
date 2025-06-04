@@ -112,11 +112,13 @@ namespace RailwayManagementApi.Helper
                 _ => 1.0m
             };
 
-            decimal fare =(decimal) baseFare * multiplier;
+            decimal fare = (decimal)baseFare * multiplier;
+            Console.WriteLine(fare);
+            Console.WriteLine(dto.Passengers.Count);
 
             if (dto.HasInsurance)
-                fare += dto.Passengers.Count * 20;
-
+                fare += 20;
+            Console.WriteLine(fare);
             return fare;
         }
 

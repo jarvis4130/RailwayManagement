@@ -70,8 +70,19 @@ export class TicketDetailComponent {
         userId: this.userId// or getUsername if backend expects that
       };
 
-      this.http.post('http://localhost:5039/api/Ticket/cancel-passenger', body).subscribe(() => {
-        alert('Passenger cancelled!');
+      // this.http.post('http://localhost:5039/api/Ticket/cancel-passenger', body).subscribe(() => {
+      //   alert('Passenger cancelled!');
+      //   this.loadTicket(); // refresh ticket
+      // });
+      this.ticketService.cancelTicket(body).subscribe((res) => {
+        console.log(res);
+        const message = `
+          ${res.message}
+          Refund Amount: ₹${res.refund}
+          Currency: ${res.currency}
+          Note: ${res.note}
+        `;
+        alert(message); // show full cancellation details
         this.loadTicket(); // refresh ticket
       });
     }); 

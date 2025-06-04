@@ -1,0 +1,126 @@
+<!-- Edit Train Schedule Card -->
+<div
+  class="bg-white backdrop-blur-md p-8 rounded-3xl shadow-2xl max-w-6xl mx-auto border border-gray-200"
+>
+  <h2 class="text-3xl font-bold text-purple-700 mb-8 flex items-center gap-2">
+    🛠️ Edit Train Schedule
+  </h2>
+
+  <form [formGroup]="form" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <!-- Select Date -->
+    <div>
+      <label class="block text-sm font-semibold text-gray-700 mb-2">
+        📅 Select Date
+      </label>
+      <input
+        type="date"
+        [min]="today"
+        formControlName="date"
+        (change)="onDateSelect()"
+        class="form-input w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 "
+      />
+    </div>
+
+    <!-- Select Train -->
+    <div>
+      <label class="block text-sm font-semibold text-gray-700 mb-2">
+        🚆 Select Train
+      </label>
+      <select
+        formControlName="trainID"
+        (change)="onTrainSelect()"
+        class="form-select w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+      >
+        <option value="" disabled selected>Select train</option>
+        <option *ngFor="let train of trainList" [value]="train.trainID">
+          {{ train.trainName }}
+        </option>
+      </select>
+    </div>
+  </form>
+
+  <!-- Editable Schedule Table -->
+  <div *ngIf="scheduleList.length > 0" class="mt-12">
+    <h3 class="text-2xl font-semibold text-gray-800 mb-6 flex items-center gap-2">
+      📋 Schedule
+    </h3>
+
+    <div class="overflow-x-auto rounded-lg shadow-sm">
+      <table class="min-w-full divide-y divide-gray-200 bg-white text-sm">
+        <thead class="bg-purple-200 text-gray-700 uppercase tracking-wider">
+          <tr>
+            <th class="px-4 py-3 text-left">Station</th>
+            <th class="px-4 py-3 text-left">Arrival</th>
+            <th class="px-4 py-3 text-left">Departure</th>
+            <th class="px-4 py-3 text-left">Fare (₹)</th>
+            <th class="px-4 py-3 text-left">Distance (km)</th>
+            <th class="px-4 py-3 text-center">Sequence</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+          <tr *ngFor="let s of scheduleList" class="hover:bg-gray-50 transition">
+            <td class="px-4 py-3">
+              <select
+                [(ngModel)]="s.stationID"
+                class="form-select w-full border-gray-300 rounded-md focus:outline-none"
+              >
+                <option
+                  *ngFor="let station of stationList"
+                  [value]="station.stationID"
+                >
+                  {{ station.stationName }}
+                </option>
+              </select>
+            </td>
+            <td class="px-4 py-3">
+              <input
+                type="time"
+                [(ngModel)]="s.arrivalTime"
+                class="form-input w-full border-gray-300 rounded-md focus:outline-none"
+              />
+            </td>
+            <td class="px-4 py-3">
+              <input
+                type="time"
+                [(ngModel)]="s.departureTime"
+                class="form-input w-full border-gray-300 rounded-md focus:outline-none"
+              />
+            </td>
+            <td class="px-4 py-3">
+              <input
+                type="number"
+                [(ngModel)]="s.fair"
+                class="form-input w-full border-gray-300 rounded-md focus:outline-none"
+              />
+            </td>
+            <td class="px-4 py-3">
+              <input
+                type="number"
+                [(ngModel)]="s.distanceFromSource"
+                class="form-input w-full border-gray-300 rounded-md focus:outline-none"
+              />
+            </td>
+            <td class="px-4 py-3 text-center">
+              <input
+                type="number"
+                [(ngModel)]="s.sequenceOrder"
+                class="form-input w-20 bg-gray-100 border-gray-300 rounded-md text-center "
+                readonly
+              />
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Submit Button -->
+    <div class="mt-8 flex justify-end">
+      <button
+        (click)="submitUpdatedSchedule()"
+        class="px-8 py-3 bg-purple-600 text-white text-lg font-semibold rounded-xl hover:bg-purple-700 transition-all shadow-lg"
+      >
+        ✅ Update Schedule
+      </button>
+    </div>
+  </div>
+</div>

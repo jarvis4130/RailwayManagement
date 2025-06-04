@@ -1,0 +1,179 @@
+<div
+  class="p-6 bg-gray-100 backdrop-blur-md rounded-2xl shadow-xl m-4 max-w-7xl mx-auto"
+>
+  <div class="flex justify-between items-center mb-6">
+    <h2 class="text-2xl font-bold text-blue-700">🚆 All Trains</h2>
+    <!-- Toggle Add Train form -->
+    <button
+      (click)="toggleAddTrainForm()"
+      class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow transition"
+      *ngIf="!showAddTrainForm"
+    >
+      ➕ Add New Train
+    </button>
+  </div>
+
+  <!-- Add Train Form Modal -->
+  <div
+    *ngIf="showAddTrainForm"
+    class="relative p-6 mb-7 bg-white rounded-2xl shadow-lg max-w-md mx-auto"
+  >
+    <button
+      (click)="toggleAddTrainForm()"
+      class="absolute top-3 right-3 text-gray-400 hover:text-red-500 text-xl font-bold focus:outline-none"
+      aria-label="Close add train form"
+    >
+      ✖
+    </button>
+
+    <h3 class="text-xl font-semibold text-blue-700 mb-4">Add New Train</h3>
+
+    <form (ngSubmit)="addTrain()" class="flex flex-col gap-4">
+      <input
+        type="text"
+        [(ngModel)]="newTrain.trainName"
+        name="trainName"
+        placeholder="Train Name"
+        required
+        class="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400"
+      />
+
+      <select
+        [(ngModel)]="newTrain.trainType"
+        name="trainType"
+        (change)="onTrainTypeChange('new')"
+        required
+        class="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+      >
+        <option value="" disabled selected class="text-gray-400">
+          Select Train Type
+        </option>
+        <option value="Superfast">Superfast</option>
+        <option value="Express">Express</option>
+      </select>
+
+      <input
+        type="number"
+        [value]="newTrain.totalSeats"
+        readonly
+        placeholder="Total Seats"
+        class="p-3 border border-gray-300 rounded-lg bg-gray-100 text-gray-700 cursor-not-allowed"
+      />
+
+      <button
+        type="submit"
+        class="bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg shadow transition"
+        [disabled]="!newTrain.trainName || !newTrain.trainType"
+      >
+        Add Train
+      </button>
+    </form>
+  </div>
+
+  <!-- Rest of your train list content... -->
+  <!-- Loading / No trains message, and train table as before -->
+  <div *ngIf="loading" class="text-center text-gray-600 py-4">
+    Loading trains...
+  </div>
+  <div
+    *ngIf="!loading && trains.length === 0"
+    class="text-center text-gray-600 py-4"
+  >
+    No trains found.
+  </div>
+
+  <!-- Train table -->
+  <div *ngIf="trains.length > 0" class="overflow-x-auto">
+    <table
+      class="min-w-full bg-white/80 backdrop-blur-md rounded-xl shadow-lg border border-gray-200"
+    >
+      <thead class="bg-blue-100 rounded-t-xl">
+        <tr>
+          <th class="p-3 text-left font-semibold text-blue-800">Train ID</th>
+          <th class="p-3 text-left font-semibold text-blue-800">Name</th>
+          <th class="p-3 text-left font-semibold text-blue-800">Train Type</th>
+          <th class="p-3 text-left font-semibold text-blue-800">Total Seats</th>
+          <th class="p-3 text-center font-semibold text-blue-800">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr
+          *ngFor="let train of trains"
+          class="border-t border-gray-300 hover:bg-blue-50 transition"
+        >
+          <td class="p-3 text-blue-900 font-medium">{{ train.trainID }}</td>
+          <td class="p-3 text-blue-900">{{ train.trainName }}</td>
+          <td class="p-3 text-blue-900">{{ train.trainType }}</td>
+          <td class="p-3 text-blue-900">{{ train.totalSeats }}</td>
+          <td class="p-3 flex justify-center space-x-3">
+            <button
+              class="bg-yellow-400 text-white px-4 py-1 rounded-lg shadow hover:bg-yellow-500 transition"
+              (click)="editTrain(train)"
+            >
+              ✏️ Edit
+            </button>
+            <button
+              class="bg-red-500 text-white px-4 py-1 rounded-lg shadow hover:bg-red-600 transition"
+              disabled
+              title="Delete feature coming soon"
+            >
+              🗑️ Delete
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <!-- Edit Train Form Modal -->
+    <div
+      *ngIf="editingTrain"
+      class="relative p-6 mb-7 bg-white rounded-2xl shadow-lg max-w-md mx-auto"
+    >
+      <button
+        (click)="cancelEdit()"
+        class="absolute top-3 right-3 text-gray-400 hover:text-red-500 text-xl font-bold focus:outline-none"
+        aria-label="Close edit train form"
+      >
+        ✖
+      </button>
+
+      <h3 class="text-xl font-semibold text-yellow-700 mb-4">Edit Train</h3>
+
+      <form (ngSubmit)="updateTrain()" class="flex flex-col gap-4">
+        <input
+          type="text"
+          [(ngModel)]="editingTrain.trainName"
+          name="editTrainName"
+          placeholder="Train Name"
+          required
+          class="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 placeholder-gray-400"
+        />
+
+        <select
+          [(ngModel)]="editingTrain.trainType"
+          name="editTrainType"
+          (change)="onTrainTypeChange('edit')"
+          required
+          class="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
+        >
+          <option value="Superfast">Superfast</option>
+          <option value="Express">Express</option>
+        </select>
+
+        <input
+          type="number"
+          [value]="editingTrain.totalSeats"
+          readonly
+          placeholder="Total Seats"
+          class="p-3 border border-gray-300 rounded-lg bg-gray-100 text-gray-700 cursor-not-allowed"
+        />
+
+        <button
+          type="submit"
+          class="bg-yellow-500 hover:bg-yellow-600 text-white py-2 rounded-lg shadow transition"
+        >
+          Update Train
+        </button>
+      </form>
+    </div>
+  </div>
+</div>

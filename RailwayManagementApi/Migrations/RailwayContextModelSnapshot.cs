@@ -350,6 +350,34 @@ namespace RailwayManagementApi.Migrations
                     b.ToTable("Payments");
                 });
 
+            modelBuilder.Entity("RailwayManagementApi.Models.Refund", b =>
+                {
+                    b.Property<int>("RefundID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("RefundID"));
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("PaymentID")
+                        .HasColumnType("int");
+
+                    b.Property<string>("RazorpayRefundId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("RefundedOn")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("RefundID");
+
+                    b.HasIndex("PaymentID");
+
+                    b.ToTable("Refunds");
+                });
+
             modelBuilder.Entity("RailwayManagementApi.Models.SeatAvailability", b =>
                 {
                     b.Property<int>("AvailabilityID")
@@ -656,6 +684,17 @@ namespace RailwayManagementApi.Migrations
                     b.Navigation("Ticket");
                 });
 
+            modelBuilder.Entity("RailwayManagementApi.Models.Refund", b =>
+                {
+                    b.HasOne("RailwayManagementApi.Models.Payment", "Payment")
+                        .WithMany()
+                        .HasForeignKey("PaymentID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Payment");
+                });
+
             modelBuilder.Entity("RailwayManagementApi.Models.SeatAvailability", b =>
                 {
                     b.HasOne("RailwayManagementApi.Models.ClassType", "ClassType")
@@ -699,7 +738,7 @@ namespace RailwayManagementApi.Migrations
                     b.HasOne("RailwayManagementApi.Models.ClassType", "ClassType")
                         .WithMany()
                         .HasForeignKey("ClassTypeID")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("RailwayManagementApi.Models.ClassType", null)
@@ -709,7 +748,7 @@ namespace RailwayManagementApi.Migrations
                     b.HasOne("RailwayManagementApi.Models.Passenger", "Passenger")
                         .WithMany()
                         .HasForeignKey("PassengerID")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("Ticket", "Ticket")
@@ -721,7 +760,7 @@ namespace RailwayManagementApi.Migrations
                     b.HasOne("RailwayManagementApi.Models.Train", "Train")
                         .WithMany()
                         .HasForeignKey("TrainID")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("ClassType");

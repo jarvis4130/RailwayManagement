@@ -1,5 +1,5 @@
-<app-navbar></app-navbar> <!-- Navbar always visible -->
+<app-navbar *ngIf="!isAdminRoute()"></app-navbar>
 
-<div class="pt-24 px-4"> 
+<div [ngClass]="{ 'pt-24 px-4': !isAdminRoute(), 'p-4': isAdminRoute() }">
   <router-outlet></router-outlet>
 </div>

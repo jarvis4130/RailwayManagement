@@ -146,27 +146,35 @@ namespace RailwayManagementApi.Services
                     });
                 }
 
+                await _dbContext.SaveChangesAsync();
+
                 var wlPosition = await _dbContext.WaitingLists
                     .Where(w => w.TrainID == booking.TrainID &&
                                 w.ClassTypeID == booking.ClassTypeID &&
                                 w.RequestDate == booking.JourneyDate)
                     .CountAsync();
 
-                _dbContext.WaitingLists.Add(new WaitingList
+                foreach (var passenger in _dbContext.Passengers.Where(p => p.TicketID == ticket.TicketID))
                 {
-                    TicketID = ticket.TicketID,
-                    TrainID = booking.TrainID,
-                    ClassTypeID = booking.ClassTypeID,
-                    RequestDate = booking.JourneyDate,
-                    Position = wlPosition + 1
-                });
+                    _dbContext.WaitingLists.Add(new WaitingList
+                    {
+                        TicketID = ticket.TicketID,
+                        TrainID = booking.TrainID,
+                        ClassTypeID = booking.ClassTypeID,
+                        RequestDate = booking.JourneyDate,
+                        Position = ++wlPosition,
+                        PassengerID = passenger.PassengerID
+                    });
+                }
             }
+
+            await _dbContext.SaveChangesAsync();
 
             _dbContext.Payments.Add(new Models.Payment
             {
                 TicketID = ticket.TicketID,
                 PaymentMode = booking.PaymentMode,
-                RazorpayPaymentId=paymentDto.RazorpayPaymentId, 
+                RazorpayPaymentId = paymentDto.RazorpayPaymentId,
                 Amount = fare,
                 PaymentDate = DateTime.Now,
                 IsRefunded = false
@@ -204,27 +212,532 @@ namespace RailwayManagementApi.Services
                 return new BadRequestObjectResult("Invalid payment signature.");
             }
 
-            return await ConfirmBookingAsync(paymentDto.BookingInfo,paymentDto);
+            return await ConfirmBookingAsync(paymentDto.BookingInfo, paymentDto);
         }
 
 
-        public async Task<IActionResult> CancelPassengerAsync(CancelPassengerDTO dto)
+        //     public async Task<IActionResult> CancelPassengerAsync(CancelPassengerDTO dto)
+        //     {
+        //         var passenger = await _dbContext.Passengers
+        //             .Include(p => p.Ticket)
+        //             .FirstOrDefaultAsync(p => p.PassengerID == dto.PassengerId && p.Ticket.UserId == dto.UserId);
+
+        //         if (passenger == null)
+        //             return new NotFoundObjectResult("Passenger not found or not owned by this user.");
+
+        //         var ticket = passenger.Ticket;
+
+
+
+        //         var cancelledSeatNumber = passenger.SeatNumber;
+
+        //         // Remove passenger
+        //         _dbContext.Passengers.Remove(passenger);
+        //         await _dbContext.SaveChangesAsync();
+
+        //         // Free seat
+        //         var seat = await _dbContext.SeatAvailabilities.FirstOrDefaultAsync(sa =>
+        //             sa.TrainID == ticket.TrainID &&
+        //             sa.ClassTypeID == ticket.ClassTypeID &&
+        //             sa.Date == ticket.JourneyDate);
+
+        //         if (seat != null)
+        //         {
+        //             seat.RemainingSeats += 1;
+        //             _dbContext.SeatAvailabilities.Update(seat);
+        //         }
+
+        //         // Promote first passenger from waiting list (if any)
+        //         var waitingListEntries = await _dbContext.WaitingLists
+        //             .Where(w => w.TrainID == ticket.TrainID
+        //                      && w.ClassTypeID == ticket.ClassTypeID
+        //                      && w.RequestDate.Date == ticket.JourneyDate.Date)
+        //             .OrderBy(w => w.Position)
+        //             .ToListAsync();
+
+        //         if (waitingListEntries.Any())
+        //         {
+        //             var firstInLine = waitingListEntries.First();
+
+        //             var waitingTicket = await _dbContext.Tickets
+        //                 .FirstOrDefaultAsync(t => t.TicketID == firstInLine.TicketID && t.Status == "Waiting");
+
+        //             if (waitingTicket != null && waitingTicket.ClassTypeID == ticket.ClassTypeID)
+        //             {
+        //                 waitingTicket.Status = "Booked";
+        //                 _dbContext.Tickets.Update(waitingTicket);
+
+        //                 // Assign seat number of cancelled passenger
+        //                 var promotedPassenger = await _dbContext.Passengers
+        //                     .FirstOrDefaultAsync(p => p.TicketID == waitingTicket.TicketID);
+
+        //                 if (promotedPassenger != null)
+        //                 {
+        //                     promotedPassenger.SeatNumber = cancelledSeatNumber;
+        //                     _dbContext.Passengers.Update(promotedPassenger);
+        //                 }
+
+        //                 // Update seat availability
+        //                 seat.RemainingSeats -= 1;
+        //                 _dbContext.SeatAvailabilities.Update(seat);
+
+        //                 // Remove from waiting list
+        //                 _dbContext.WaitingLists.Remove(firstInLine);
+
+        //                 // Reorder remaining positions
+        //                 var remainingWaiting = waitingListEntries.Skip(1).ToList();
+        //                 for (int i = 0; i < remainingWaiting.Count; i++)
+        //                 {
+        //                     remainingWaiting[i].Position = i + 1;
+        //                 }
+
+        //                 // Send Notification
+        //                 var user = await _dbContext.Users.FindAsync(waitingTicket.UserId);
+        //                 if (user != null)
+        //                 {
+        //                     var subject = "Your Railway Ticket is Confirmed!";
+        //                     var message = $@"
+        //                              <p>Dear {user.UserName},</p>
+        //                              <p>Your waiting ticket (ID: <strong>{waitingTicket.TicketID}</strong>) has been <strong>confirmed</strong>.</p>
+        //                              <p>You have been allotted Seat Number: <strong>{promotedPassenger.SeatNumber}</strong>.</p>
+        //                              <br />
+        //                              <p>Thank you for choosing our railway service.</p>
+        //                              ";
+        //                     // Send Email
+        //                     await _notificationService.SendEmailAsync(user.Email, subject, message);
+
+        //                     // Create Notification record
+        //                     var notification = new Notification
+        //                     {
+        //                         UserName = user.Id,
+        //                         TrainID = ticket.TrainID,
+        //                         NotifiedOn = DateTime.Now,
+        //                         Type = "Ticket Confirmed",
+        //                         Message = $"Your waiting ticket (ID: {waitingTicket.TicketID}) has been confirmed. Seat Number: {promotedPassenger.SeatNumber}."
+        //                     };
+        //                     _dbContext.Notifications.Add(notification);
+        //                 }
+        //             }
+        //         }
+
+        //         // If no passengers remain on this ticket, cancel the ticket
+        //         var remaining = await _dbContext.Passengers
+        //             .Where(p => p.TicketID == ticket.TicketID)
+        //             .ToListAsync();
+
+        //         if (!remaining.Any())
+        //         {
+        //             ticket.Status = "Cancelled";
+        //             Console.WriteLine(ticket);
+        //             _dbContext.Tickets.Update(ticket);
+        //             await _dbContext.SaveChangesAsync();
+        //         }
+
+        //         // Refund logic (50% of this passenger’s fare)
+        //         decimal perPassengerFare = ticket.Fare / (remaining.Count + 1);
+        //         decimal refund = perPassengerFare * 0.5m;
+
+        //         await _dbContext.SaveChangesAsync();
+
+        //         // refund logic
+        //         string key = _config["Razorpay:Key"];
+        //         string secret = _config["Razorpay:Secret"];
+
+        //         var payment = await _dbContext.Payments.FirstOrDefaultAsync(p => p.TicketID == ticket.TicketID);
+
+        //         if (payment == null || string.IsNullOrEmpty(payment.RazorpayPaymentId))
+        //         {
+        //             return new NotFoundObjectResult("Payment record not found.");
+        //         }
+
+        //         try
+        //         {
+        //             var razorpayClient = new RazorpayClient(key, secret);
+
+        //             int refundAmountInPaise = (int)(refund * 100); // Razorpay expects paise
+
+        //             var paymentObj = razorpayClient.Payment.Fetch(payment.RazorpayPaymentId);
+
+        //             Dictionary<string, object> refundParams = new Dictionary<string, object>
+        // {
+        //     { "amount", refundAmountInPaise },
+        //     { "notes", new Dictionary<string, string> { { "reason", "Passenger cancellation - partial refund" } } }
+        // };
+
+        //             var refundResponse = paymentObj.Refund(refundParams);
+
+        //             // Save refund record
+        //             var refundEntity = new Models.Refund
+        //             {
+        //                 PaymentID = payment.PaymentID,
+        //                 RazorpayRefundId = refundResponse["id"].ToString(),
+        //                 Amount = refund,
+        //                 RefundedOn = DateTime.Now
+        //             };
+        //             _dbContext.Refunds.Add(refundEntity);
+
+        //             await _dbContext.SaveChangesAsync();
+        //         }
+        //         catch (Exception ex)
+        //         {
+        //             return new BadRequestObjectResult("Razorpay refund failed: " + ex.Message);
+        //         }
+
+
+        //         return new OkObjectResult(new
+        //         {
+        //             Message = "Passenger cancelled.",
+        //             Refund = refund,
+        //             Currency = "INR",
+        //             Note = "50% refund as per cancellation policy."
+        //         });
+        //     }
+
+        // public async Task<CancelPassengerResult> CancelPassengerAsync(CancelPassengerDTO dto)
+        // {
+        //     var passenger = await _dbContext.Passengers
+        //         .Include(p => p.Ticket)
+        //         .FirstOrDefaultAsync(p => p.PassengerID == dto.PassengerId && p.Ticket.UserId == dto.UserId);
+
+        //     if (passenger == null)
+        //     {
+        //         return new CancelPassengerResult
+        //         {
+        //             Success = false,
+        //             IsNotFound = true,
+        //             Message = "Passenger not found or not owned by this user."
+        //         };
+        //     }
+
+        //     var ticket = passenger.Ticket;
+
+        //     if (ticket.Status == "Waiting")
+        //     {
+        //         // Remove passenger
+        //         _dbContext.Passengers.Remove(passenger);
+
+        //         // Remove waiting list entry
+        //         var waitingEntry = await _dbContext.WaitingLists
+        //             .FirstOrDefaultAsync(w => w.TicketID == ticket.TicketID);
+
+        //         if (waitingEntry != null)
+        //             _dbContext.WaitingLists.Remove(waitingEntry);
+
+        //         await _dbContext.SaveChangesAsync();
+
+        //         // decimal perPassengerFare = ticket.Fare / (await _dbContext.Passengers.CountAsync(p => p.TicketID == ticket.TicketID) + 1);
+        //         // decimal refund = perPassengerFare * 1.0m; // full refund
+
+        //         int passengerCountBeforeCancellation = await _dbContext.Passengers.CountAsync(p => p.TicketID == ticket.TicketID);
+        //         Console.WriteLine(passengerCountBeforeCancellation);
+        //         // Step 2: Calculate per passenger fare correctly
+        //         decimal perPassengerFare = ticket.Fare / passengerCountBeforeCancellation;
+        //         Console.WriteLine(ticket.Fare + "  " + perPassengerFare);
+
+        //         // Step 3: Refund amount is that single passenger's fare share (full or partial)
+        //         decimal refund = perPassengerFare * 1.0m; // Or 1.0m if full refund
+        //         Console.WriteLine(refund);
+
+
+        //         var payment = await _dbContext.Payments.FirstOrDefaultAsync(p => p.TicketID == ticket.TicketID);
+
+        //         if (payment == null || string.IsNullOrEmpty(payment.RazorpayPaymentId))
+        //         {
+        //             return new CancelPassengerResult
+        //             {
+        //                 Success = false,
+        //                 IsNotFound = true,
+        //                 Message = "Payment record not found."
+        //             };
+        //         }
+
+        //         try
+        //         {
+        //             var razorpayClient = new RazorpayClient(_config["Razorpay:Key"], _config["Razorpay:Secret"]);
+        //             int refundAmountInPaise = (int)(refund * 100);
+        //             var paymentObj = razorpayClient.Payment.Fetch(payment.RazorpayPaymentId);
+
+        //             var refundParams = new Dictionary<string, object>
+        //     {
+        //         { "amount", refundAmountInPaise },
+        //         { "notes", new Dictionary<string, string> { { "reason", "Waiting list passenger cancellation - full refund" } } }
+        //     };
+
+        //             var refundResponse = paymentObj.Refund(refundParams);
+
+        //             var refundEntity = new Models.Refund
+        //             {
+        //                 PaymentID = payment.PaymentID,
+        //                 RazorpayRefundId = refundResponse["id"].ToString(),
+        //                 Amount = refund,
+        //                 RefundedOn = DateTime.Now
+        //             };
+        //             _dbContext.Refunds.Add(refundEntity);
+        //             await _dbContext.SaveChangesAsync();
+
+        //             return new CancelPassengerResult
+        //             {
+        //                 Success = true,
+        //                 Message = "Waiting list passenger cancelled.",
+        //                 RefundAmount = refund,
+        //                 Currency = "INR",
+        //                 Note = "Full refund as passenger was on waiting list."
+        //             };
+        //         }
+        //         catch (Exception ex)
+        //         {
+        //             return new CancelPassengerResult
+        //             {
+        //                 Success = false,
+        //                 IsError = true,
+        //                 Message = "Razorpay refund failed.",
+        //                 ErrorDetails = ex.Message
+        //             };
+        //         }
+        //     }
+
+        //     // For booked passengers
+        //     var cancelledSeatNumber = passenger.SeatNumber;
+
+        //     _dbContext.Passengers.Remove(passenger);
+        //     await _dbContext.SaveChangesAsync();
+
+        //     var seat = await _dbContext.SeatAvailabilities.FirstOrDefaultAsync(sa =>
+        //         sa.TrainID == ticket.TrainID &&
+        //         sa.ClassTypeID == ticket.ClassTypeID &&
+        //         sa.Date == ticket.JourneyDate);
+
+        //     if (seat != null)
+        //     {
+        //         seat.RemainingSeats += 1;
+        //         _dbContext.SeatAvailabilities.Update(seat);
+        //     }
+
+        //     var waitingListEntries = await _dbContext.WaitingLists
+        //         .Where(w => w.TrainID == ticket.TrainID
+        //                  && w.ClassTypeID == ticket.ClassTypeID
+        //                  && w.RequestDate.Date == ticket.JourneyDate.Date)
+        //         .OrderBy(w => w.Position)
+        //         .ToListAsync();
+
+        //     if (waitingListEntries.Any())
+        //     {
+        //         var firstInLine = waitingListEntries.First();
+        //         var waitingTicket = await _dbContext.Tickets
+        //             .FirstOrDefaultAsync(t => t.TicketID == firstInLine.TicketID && t.Status == "Waiting");
+
+        //         if (waitingTicket != null && waitingTicket.ClassTypeID == ticket.ClassTypeID)
+        //         {
+        //             waitingTicket.Status = "Booked";
+        //             _dbContext.Tickets.Update(waitingTicket);
+
+        //             var promotedPassenger = await _dbContext.Passengers
+        //                 .FirstOrDefaultAsync(p => p.TicketID == waitingTicket.TicketID);
+
+        //             if (promotedPassenger != null)
+        //             {
+        //                 promotedPassenger.SeatNumber = cancelledSeatNumber;
+        //                 _dbContext.Passengers.Update(promotedPassenger);
+        //             }
+
+        //             seat.RemainingSeats -= 1;
+        //             _dbContext.SeatAvailabilities.Update(seat);
+
+        //             _dbContext.WaitingLists.Remove(firstInLine);
+
+        //             var remainingWaiting = waitingListEntries.Skip(1).ToList();
+        //             for (int i = 0; i < remainingWaiting.Count; i++)
+        //             {
+        //                 remainingWaiting[i].Position = i + 1;
+        //             }
+
+        //             // Save notification (but don't send email here, service should just return data)
+        //             var user = await _dbContext.Users.FindAsync(waitingTicket.UserId);
+        //             if (user != null)
+        //             {
+        //                 var notification = new Notification
+        //                 {
+        //                     UserName = user.Id,
+        //                     TrainID = ticket.TrainID,
+        //                     NotifiedOn = DateTime.Now,
+        //                     Type = "Ticket Confirmed",
+        //                     Message = $"Your waiting ticket (ID: {waitingTicket.TicketID}) has been confirmed. Seat Number: {promotedPassenger.SeatNumber}."
+        //                 };
+        //                 _dbContext.Notifications.Add(notification);
+        //             }
+        //         }
+        //     }
+
+        //     var remainingPassengers = await _dbContext.Passengers
+        //         .Where(p => p.TicketID == ticket.TicketID)
+        //         .ToListAsync();
+
+        //     if (!remainingPassengers.Any())
+        //     {
+        //         ticket.Status = "Cancelled";
+        //         _dbContext.Tickets.Update(ticket);
+        //         await _dbContext.SaveChangesAsync();
+        //     }
+
+        //     decimal perPassengerFareBooked = ticket.Fare / (remainingPassengers.Count + 1);
+        //     decimal refundBooked = perPassengerFareBooked * 0.5m; // 50% refund
+
+        //     await _dbContext.SaveChangesAsync();
+
+        //     var paymentBooked = await _dbContext.Payments.FirstOrDefaultAsync(p => p.TicketID == ticket.TicketID);
+
+        //     if (paymentBooked == null || string.IsNullOrEmpty(paymentBooked.RazorpayPaymentId))
+        //     {
+        //         return new CancelPassengerResult
+        //         {
+        //             Success = false,
+        //             IsNotFound = true,
+        //             Message = "Payment record not found."
+        //         };
+        //     }
+
+        //     try
+        //     {
+        //         var razorpayClient = new RazorpayClient(_config["Razorpay:Key"], _config["Razorpay:Secret"]);
+        //         int refundAmountInPaise = (int)(refundBooked * 100);
+        //         var paymentObj = razorpayClient.Payment.Fetch(paymentBooked.RazorpayPaymentId);
+
+        //         var refundParams = new Dictionary<string, object>
+        // {
+        //     { "amount", refundAmountInPaise },
+        //     { "notes", new Dictionary<string, string> { { "reason", "Passenger cancellation - partial refund" } } }
+        // };
+
+        //         var refundResponse = paymentObj.Refund(refundParams);
+
+        //         var refundEntity = new Models.Refund
+        //         {
+        //             PaymentID = paymentBooked.PaymentID,
+        //             RazorpayRefundId = refundResponse["id"].ToString(),
+        //             Amount = refundBooked,
+        //             RefundedOn = DateTime.Now
+        //         };
+        //         _dbContext.Refunds.Add(refundEntity);
+
+        //         await _dbContext.SaveChangesAsync();
+
+        //         return new CancelPassengerResult
+        //         {
+        //             Success = true,
+        //             Message = "Passenger cancelled.",
+        //             RefundAmount = refundBooked,
+        //             Currency = "INR",
+        //             Note = "50% refund as per cancellation policy."
+        //         };
+        //     }
+        //     catch (Exception ex)
+        //     {
+        //         return new CancelPassengerResult
+        //         {
+        //             Success = false,
+        //             IsError = true,
+        //             Message = "Razorpay refund failed.",
+        //             ErrorDetails = ex.Message
+        //         };
+        //     }
+        // }
+        public async Task<CancelPassengerResult> CancelPassengerAsync(CancelPassengerDTO dto)
         {
             var passenger = await _dbContext.Passengers
                 .Include(p => p.Ticket)
                 .FirstOrDefaultAsync(p => p.PassengerID == dto.PassengerId && p.Ticket.UserId == dto.UserId);
 
             if (passenger == null)
-                return new NotFoundObjectResult("Passenger not found or not owned by this user.");
+            {
+                return new CancelPassengerResult
+                {
+                    Success = false,
+                    IsNotFound = true,
+                    Message = "Passenger not found or not owned by this user."
+                };
+            }
 
             var ticket = passenger.Ticket;
+
+            // ===== Waiting List Passenger Logic =====
+            if (ticket.Status == "Waiting")
+            {
+                var passengerCountBefore = await _dbContext.Passengers.CountAsync(p => p.TicketID == ticket.TicketID);
+                decimal perPassengerFare = ticket.Fare / passengerCountBefore;
+                decimal refund = perPassengerFare;
+
+                // Remove passenger
+                _dbContext.Passengers.Remove(passenger);
+
+                // Remove waiting list entry
+                var waitingEntry = await _dbContext.WaitingLists.FirstOrDefaultAsync(w => w.TicketID == ticket.TicketID);
+                if (waitingEntry != null)
+                    _dbContext.WaitingLists.Remove(waitingEntry);
+
+                await _dbContext.SaveChangesAsync();
+
+                var payment = await _dbContext.Payments.FirstOrDefaultAsync(p => p.TicketID == ticket.TicketID);
+                if (payment == null || string.IsNullOrEmpty(payment.RazorpayPaymentId))
+                {
+                    return new CancelPassengerResult
+                    {
+                        Success = false,
+                        IsNotFound = true,
+                        Message = "Payment record not found."
+                    };
+                }
+
+                try
+                {
+                    var razorpayClient = new RazorpayClient(_config["Razorpay:Key"], _config["Razorpay:Secret"]);
+                    int refundAmountInPaise = (int)(refund * 100);
+
+                    var paymentObj = razorpayClient.Payment.Fetch(payment.RazorpayPaymentId);
+                    var refundParams = new Dictionary<string, object>
+            {
+                { "amount", refundAmountInPaise },
+                { "notes", new Dictionary<string, string> { { "reason", "Waiting list passenger cancellation - full refund" } } }
+            };
+
+                    var refundResponse = paymentObj.Refund(refundParams);
+
+                    var refundEntity = new Models.Refund
+                    {
+                        PaymentID = payment.PaymentID,
+                        RazorpayRefundId = refundResponse["id"].ToString(),
+                        Amount = refund,
+                        RefundedOn = DateTime.Now
+                    };
+                    _dbContext.Refunds.Add(refundEntity);
+                    await _dbContext.SaveChangesAsync();
+
+                    return new CancelPassengerResult
+                    {
+                        Success = true,
+                        Message = "Waiting list passenger cancelled.",
+                        RefundAmount = refund,
+                        Currency = "INR",
+                        Note = "Full refund as passenger was on waiting list."
+                    };
+                }
+                catch (Exception ex)
+                {
+                    return new CancelPassengerResult
+                    {
+                        Success = false,
+                        IsError = true,
+                        Message = "Razorpay refund failed.",
+                        ErrorDetails = ex.Message
+                    };
+                }
+            }
+
+            // ===== Confirmed Booking Passenger Logic =====
             var cancelledSeatNumber = passenger.SeatNumber;
 
-            // Remove passenger
+            // Remove passenger and update seats
             _dbContext.Passengers.Remove(passenger);
-            await _dbContext.SaveChangesAsync();
 
-            // Free seat
             var seat = await _dbContext.SeatAvailabilities.FirstOrDefaultAsync(sa =>
                 sa.TrainID == ticket.TrainID &&
                 sa.ClassTypeID == ticket.ClassTypeID &&
@@ -236,7 +749,7 @@ namespace RailwayManagementApi.Services
                 _dbContext.SeatAvailabilities.Update(seat);
             }
 
-            // Promote first passenger from waiting list (if any)
+            // Promote from waiting list if available
             var waitingListEntries = await _dbContext.WaitingLists
                 .Where(w => w.TrainID == ticket.TrainID
                          && w.ClassTypeID == ticket.ClassTypeID
@@ -247,185 +760,123 @@ namespace RailwayManagementApi.Services
             if (waitingListEntries.Any())
             {
                 var firstInLine = waitingListEntries.First();
+                var waitingTicket = await _dbContext.Tickets.FirstOrDefaultAsync(t =>
+                    t.TicketID == firstInLine.TicketID && t.Status == "Waiting");
 
-                var waitingTicket = await _dbContext.Tickets
-                    .FirstOrDefaultAsync(t => t.TicketID == firstInLine.TicketID && t.Status == "Waiting");
-
-                if (waitingTicket != null && waitingTicket.ClassTypeID == ticket.ClassTypeID)
+                if (waitingTicket != null)
                 {
                     waitingTicket.Status = "Booked";
                     _dbContext.Tickets.Update(waitingTicket);
 
-                    // Assign seat number of cancelled passenger
-                    var promotedPassenger = await _dbContext.Passengers
-                        .FirstOrDefaultAsync(p => p.TicketID == waitingTicket.TicketID);
-
+                    var promotedPassenger = await _dbContext.Passengers.FirstOrDefaultAsync(p => p.TicketID == waitingTicket.TicketID);
                     if (promotedPassenger != null)
                     {
                         promotedPassenger.SeatNumber = cancelledSeatNumber;
                         _dbContext.Passengers.Update(promotedPassenger);
                     }
 
-                    // Update seat availability
                     seat.RemainingSeats -= 1;
                     _dbContext.SeatAvailabilities.Update(seat);
 
-                    // Remove from waiting list
                     _dbContext.WaitingLists.Remove(firstInLine);
 
-                    // Reorder remaining positions
                     var remainingWaiting = waitingListEntries.Skip(1).ToList();
                     for (int i = 0; i < remainingWaiting.Count; i++)
                     {
                         remainingWaiting[i].Position = i + 1;
                     }
 
-                    // Send Notification
                     var user = await _dbContext.Users.FindAsync(waitingTicket.UserId);
                     if (user != null)
                     {
-                        var subject = "Your Railway Ticket is Confirmed!";
-                        var message = $@"
-                                 <p>Dear {user.UserName},</p>
-                                 <p>Your waiting ticket (ID: <strong>{waitingTicket.TicketID}</strong>) has been <strong>confirmed</strong>.</p>
-                                 <p>You have been allotted Seat Number: <strong>{promotedPassenger.SeatNumber}</strong>.</p>
-                                 <br />
-                                 <p>Thank you for choosing our railway service.</p>
-                                 ";
-                        // Send Email
-                        await _notificationService.SendEmailAsync(user.Email, subject, message);
-
-                        // Create Notification record
                         var notification = new Notification
                         {
-                            UserName = user.UserName,
+                            UserName = user.Id,
                             TrainID = ticket.TrainID,
                             NotifiedOn = DateTime.Now,
                             Type = "Ticket Confirmed",
                             Message = $"Your waiting ticket (ID: {waitingTicket.TicketID}) has been confirmed. Seat Number: {promotedPassenger.SeatNumber}."
                         };
+                        await _notificationService.SendEmailAsync(user.Email, notification.Type,notification.Message);
                         _dbContext.Notifications.Add(notification);
                     }
                 }
             }
 
-            // If no passengers remain on this ticket, cancel the ticket
-            var remaining = await _dbContext.Passengers
-                .Where(p => p.TicketID == ticket.TicketID)
-                .ToListAsync();
+            await _dbContext.SaveChangesAsync();
 
-            if (!remaining.Any())
+            var remainingPassengers = await _dbContext.Passengers.Where(p => p.TicketID == ticket.TicketID).ToListAsync();
+
+            if (!remainingPassengers.Any())
             {
                 ticket.Status = "Cancelled";
-                Console.WriteLine(ticket);
                 _dbContext.Tickets.Update(ticket);
-                await _dbContext.SaveChangesAsync();
             }
 
-            // Refund logic (50% of this passenger’s fare)
-            decimal perPassengerFare = ticket.Fare / (remaining.Count + 1);
-            decimal refund = perPassengerFare * 0.5m;
+            decimal perPassengerFareBooked = ticket.Fare / (remainingPassengers.Count + 1); // +1 for the cancelled passenger
+            decimal refundBooked = perPassengerFareBooked * 0.5m; // 50% refund
 
             await _dbContext.SaveChangesAsync();
 
-            // refund logic
-            string key = _config["Razorpay:Key"];
-            string secret = _config["Razorpay:Secret"];
-
-
-            var payment = await _dbContext.Payments.FirstOrDefaultAsync(p => p.TicketID == ticket.TicketID);
-
-            if (payment != null && !string.IsNullOrEmpty(payment.RazorpayPaymentId) && !payment.IsRefunded)
+            var paymentBooked = await _dbContext.Payments.FirstOrDefaultAsync(p => p.TicketID == ticket.TicketID);
+            if (paymentBooked == null || string.IsNullOrEmpty(paymentBooked.RazorpayPaymentId))
             {
-                try
+                return new CancelPassengerResult
                 {
-                    var razorpayClient = new RazorpayClient(key, secret);
+                    Success = false,
+                    IsNotFound = true,
+                    Message = "Payment record not found."
+                };
+            }
 
-                    int refundAmountInPaise = (int)(refund * 100); // Razorpay expects paise
+            try
+            {
+                var razorpayClient = new RazorpayClient(_config["Razorpay:Key"], _config["Razorpay:Secret"]);
+                int refundAmountInPaise = (int)(refundBooked * 100);
 
-                    var paymentObj = razorpayClient.Payment.Fetch(payment.RazorpayPaymentId);
-
-                    Dictionary<string, object> refundParams = new Dictionary<string, object>
+                var paymentObj = razorpayClient.Payment.Fetch(paymentBooked.RazorpayPaymentId);
+                var refundParams = new Dictionary<string, object>
         {
             { "amount", refundAmountInPaise },
-            { "notes", new Dictionary<string, string> { { "reason", "Passenger cancellation - 50% refund" } } }
+            { "notes", new Dictionary<string, string> { { "reason", "Passenger cancellation - partial refund" } } }
         };
 
-                    var refundResponse = paymentObj.Refund(refundParams);
+                var refundResponse = paymentObj.Refund(refundParams);
 
-                    // Mark refund status
-                    payment.IsRefunded = true;
-                    _dbContext.Payments.Update(payment);
-                    await _dbContext.SaveChangesAsync();
-                }
-                catch (Exception ex)
+                var refundEntity = new Models.Refund
                 {
-                    return new BadRequestObjectResult("Razorpay refund failed: " + ex.Message);
-                }
-            }
-            else
-            {
-                return new NotFoundObjectResult("Payment record not found or already refunded.");
-            }
+                    PaymentID = paymentBooked.PaymentID,
+                    RazorpayRefundId = refundResponse["id"].ToString(),
+                    Amount = refundBooked,
+                    RefundedOn = DateTime.Now
+                };
+                _dbContext.Refunds.Add(refundEntity);
 
-            return new OkObjectResult(new
+                await _dbContext.SaveChangesAsync();
+
+                return new CancelPassengerResult
+                {
+                    Success = true,
+                    Message = "Passenger cancelled.",
+                    RefundAmount = refundBooked,
+                    Currency = "INR",
+                    Note = "50% refund as per cancellation policy."
+                };
+            }
+            catch (Exception ex)
             {
-                Message = "Passenger cancelled.",
-                Refund = refund,
-                Currency = "INR",
-                Note = "50% refund as per cancellation policy."
-            });
+                return new CancelPassengerResult
+                {
+                    Success = false,
+                    IsError = true,
+                    Message = "Razorpay refund failed.",
+                    ErrorDetails = ex.Message
+                };
+            }
         }
 
 
-        // public async Task<IActionResult> GetTicketDetailsAsync(int ticketId)
-        // {
-        //     var ticket = await _dbContext.Tickets
-        //         .Include(t => t.SourceStation)
-        //         .Include(t => t.DestinationStation)
-        //         .Include(t => t.ClassType)
-        //         .Include(t => t.Passengers)  // Include Passengers
-        //         .Include(t => t.WaitingLists) // Include WaitingLists
-        //         .FirstOrDefaultAsync(t => t.TicketID == ticketId);
 
-        //     if (ticket == null)
-        //         return new NotFoundObjectResult(new { message = "Ticket not found" });
-
-        //     var passengerInfo = new List<string>();
-
-        //     if (ticket.Status == "Booked")
-        //     {
-        //         passengerInfo = ticket.Passengers
-        //             .Select(p => $"{p.Name} - {p.SeatNumber}")
-        //             .ToList();
-        //     }
-        //     else if (ticket.Status == "Waiting")
-        //     {
-        //         passengerInfo = ticket.WaitingLists
-        //             .Select(w =>
-        //             {
-        //                 // Get the corresponding passenger for this ticket's WaitingList entry
-        //                 var passenger = ticket.Passengers.FirstOrDefault(p => p.TicketID == ticketId);
-        //                 return passenger != null ? $"{passenger.Name} - Waiting No: {w.Position}" : $"Waiting No: {w.Position}";
-        //             })
-        //             .ToList();
-        //     }
-
-        //     // Create DTO for ticket details
-        //     var ticketDetailsDto = new TicketDetailsDTO
-        //     {
-        //         Source = ticket.SourceStation.StationName,
-        //         Destination = ticket.DestinationStation.StationName,
-        //         BookingDate = ticket.BookingDate.ToString("yyyy-MM-dd"),
-        //         JourneyDate = ticket.JourneyDate.ToString("yyyy-MM-dd"),
-        //         Class = ticket.ClassType.ClassName,
-        //         Fare = ticket.Fare,
-        //         Status = ticket.Status,
-        //         PassengerInfo = passengerInfo // List now contains both booked passengers and waiting passengers with positions
-        //     };
-
-        //     return new OkObjectResult(ticketDetailsDto);
-        // }
         public async Task<IActionResult> GetTicketDetailsAsync(int ticketId)
         {
             var ticket = await _dbContext.Tickets

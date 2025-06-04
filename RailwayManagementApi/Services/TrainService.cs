@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using RailwayManagementApi.Data;
 using RailwayManagementApi.DTOs;
+using RailwayManagementApi.Models;
 
 namespace RailwayManagementApi.Services
 {
@@ -244,6 +245,133 @@ namespace RailwayManagementApi.Services
             }
 
             return result;
+        }
+
+        public async Task<IEnumerable<TrainDTOAdmin>> GetAllTrainsAsync()
+        {
+            return await _dbContext.Trains
+         .Select(t => new TrainDTOAdmin
+         {
+             TrainID = t.TrainID,
+             TrainName = t.TrainName,
+             TrainType = t.TrainType,
+             TotalSeats = t.TotalSeats,
+             RunningDays = t.RunningDays
+         })
+         .ToListAsync();
+        }
+
+        public async Task<Train> AddTrainAsync(AddTrainReq request)
+        {
+            var newTrain = new Train
+            {
+                TrainName = request.TrainName,
+                TrainType = request.TrainType,
+                TotalSeats = request.TotalSeats,
+                RunningDays = "" // Optional: can be set later
+            };
+
+            _dbContext.Trains.Add(newTrain);
+            await _dbContext.SaveChangesAsync();
+            return newTrain;
+        }
+
+        public async Task<bool> DeleteTrainAsync(int trainId)
+        {
+            var train = await _dbContext.Trains.FindAsync(trainId);
+            if (train == null)
+                return false;
+
+            _dbContext.Trains.Remove(train);
+            await _dbContext.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<Train?> UpdateTrainAsync(int trainId, AddTrainReq request)
+        {
+            var train = await _dbContext.Trains.FindAsync(trainId);
+            if (train == null)
+                return null;
+
+            if (!string.IsNullOrWhiteSpace(request.TrainName))
+                train.TrainName = request.TrainName;
+
+            if (!string.IsNullOrWhiteSpace(request.TrainType))
+            {
+                train.TrainType = request.TrainType;
+                train.TotalSeats = request.TotalSeats;
+            }
+            await _dbContext.SaveChangesAsync();
+            return train;
+        }
+
+        public async Task<TrainSchedule> AddScheduleAsync(TrainScheduleDTO dto)
+        {
+            var schedule = new TrainSchedule
+            {
+                TrainID = dto.TrainID,
+                StationID = dto.StationID,
+                ArrivalTime = dto.ArrivalTime,
+                DepartureTime = dto.DepartureTime,
+                SequenceOrder = dto.SequenceOrder,
+                Fair = dto.Fair,
+                DistanceFromSource = dto.DistanceFromSource
+            };
+
+            _dbContext.TrainSchedules.Add(schedule);
+            await _dbContext.SaveChangesAsync();
+            return schedule;
+        }
+
+        public List<int> GetTrainIdsByDate(string date)
+        {
+            if (!DateTime.TryParse(date, out var parsedDate))
+                throw new ArgumentException("Invalid date format");
+
+            return _dbContext.TrainSchedules
+                .Where(s => s.ArrivalTime.Date == parsedDate.Date || s.DepartureTime.Date == parsedDate.Date)
+                .Select(s => s.TrainID)
+                .Distinct()
+                .ToList();
+        }
+
+        public List<TrainScheduleDTO> GetScheduleByTrainAndDate(int trainId, DateTime date)
+        {
+            return _dbContext.TrainSchedules
+                .Where(s => s.TrainID == trainId && s.ArrivalTime.Date == date.Date)
+                .OrderBy(s => s.SequenceOrder)
+                .Select(s => new TrainScheduleDTO
+                {
+                    StationID = s.StationID,
+                    ArrivalTime = s.ArrivalTime,
+                    DepartureTime = s.DepartureTime,
+                    SequenceOrder = s.SequenceOrder,
+                    Fair = s.Fair,
+                    DistanceFromSource = s.DistanceFromSource
+                })
+                .ToList();
+        }
+
+        public async Task UpdateTrainScheduleAsync(UpdateScheduleDto dto)
+        {
+            foreach (var stop in dto.Schedules)
+            {
+                var existing = await _dbContext.TrainSchedules.FirstOrDefaultAsync(s =>
+                    s.TrainID == dto.TrainID &&
+                    s.StationID == stop.StationID &&
+                    s.ArrivalTime.Date == dto.Date.Date);
+
+                if (existing != null)
+                {
+                    existing.ArrivalTime = stop.ArrivalTime;
+                    existing.DepartureTime = stop.DepartureTime;
+                    existing.SequenceOrder = stop.SequenceOrder;
+                    existing.Fair = stop.Fare;
+                    existing.DistanceFromSource = stop.DistanceFromSource;
+                }
+            }
+
+            await _dbContext.SaveChangesAsync();
         }
     }
 }

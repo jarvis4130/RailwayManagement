@@ -1,0 +1,51 @@
+<div class="min-h-screen bg-gray-100">
+  <!-- Navbar -->
+  <nav class="bg-white/60 backdrop-blur-md shadow-md px-6 py-4 flex justify-between items-center rounded-b-xl mx-4 mt-4">
+    <div class="flex items-center space-x-4 text-2xl font-bold text-blue-700">
+      <img src="logo.png" class="w-12 h-12 rounded-full shadow-md" alt="Logo">
+      <span>Welcome, Admin</span>
+    </div>
+    <button (click)="logout()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg shadow-md transition">
+      🔓 Logout
+    </button>
+  </nav>
+
+  <!-- Dashboard Content -->
+  <div class="max-w-6xl mx-auto px-4 py-10">
+    <!-- Train Management -->
+    <div class="mb-10 bg-white/60 backdrop-blur-md p-6 rounded-2xl shadow-lg">
+      <h3 class="text-2xl font-semibold text-blue-700 mb-4">🚆 Train Management</h3>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <button routerLink="/admin/train-list" class="bg-white/70 text-blue-700 hover:bg-blue-100 transition p-4 rounded-xl shadow-md border">
+          ⚙️ Manage Train
+        </button>
+      </div>
+    </div>
+
+    <!-- Station Management -->
+    <div class="mb-10 bg-white/60 backdrop-blur-md p-6 rounded-2xl shadow-lg">
+      <h3 class="text-2xl font-semibold text-green-700 mb-4">🏢 Station Management</h3>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <button routerLink="/admin/station-management" class="bg-white/70 text-green-700 hover:bg-green-100 transition p-4 rounded-xl shadow-md border">
+          ⚙️ Manage Stations
+        </button>
+      </div>
+    </div>
+
+    <!-- Schedule Management -->
+    <div class="bg-white/60 backdrop-blur-md p-6 rounded-2xl shadow-lg">
+      <h3 class="text-2xl font-semibold text-purple-700 mb-4">📅 Schedule Management</h3>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <button routerLink="/admin/add-train-schedule" class="bg-white/70 text-blue-700 hover:bg-blue-100 transition p-4 rounded-xl shadow-md border">
+          ➕ Add Schedule
+        </button>
+        <button routerLink="/admin/update-train-schedule" class="bg-white/70 text-yellow-600 hover:bg-yellow-100 transition p-4 rounded-xl shadow-md border">
+          ✏️ Update Schedule
+        </button>
+        <button routerLink="/admin/delete-train-schedule" class="bg-white/70 text-red-600 hover:bg-red-100 transition p-4 rounded-xl shadow-md border">
+          🗑️ Delete Schedule
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

@@ -14,41 +14,76 @@ namespace RailwayManagementApi.Data
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
-            modelBuilder.Entity<WaitingList>()
-                .HasOne(w => w.Ticket)
-                .WithMany(t => t.WaitingLists)
-                .HasForeignKey(w => w.TicketID)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            modelBuilder.Entity<WaitingList>()
-                .HasOne(w => w.Train)
-                .WithMany()
-                .HasForeignKey(w => w.TrainID)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            modelBuilder.Entity<WaitingList>()
-                .HasOne(w => w.ClassType)
-                .WithMany()
-                .HasForeignKey(w => w.ClassTypeID)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            modelBuilder.Entity<WaitingList>()
-                .HasOne(w => w.Passenger)
-                .WithMany()
-                .HasForeignKey(w => w.PassengerID)
-                .OnDelete(DeleteBehavior.Restrict);
-
             modelBuilder.Entity<Ticket>()
                 .HasOne(t => t.SourceStation)
                 .WithMany()
                 .HasForeignKey(t => t.SourceID)
-                .OnDelete(DeleteBehavior.Restrict); // or NoAction
+                .OnDelete(DeleteBehavior.Restrict); // ✅ Fix here
 
             modelBuilder.Entity<Ticket>()
                 .HasOne(t => t.DestinationStation)
                 .WithMany()
                 .HasForeignKey(t => t.DestinationID)
                 .OnDelete(DeleteBehavior.Restrict);
+            modelBuilder.Entity<WaitingList>()
+                .HasOne(w => w.Ticket)
+                .WithMany(t => t.WaitingLists)
+                .HasForeignKey(w => w.TicketID)
+                .OnDelete(DeleteBehavior.Restrict); // Keep as is
+
+            modelBuilder.Entity<WaitingList>()
+                .HasOne(w => w.Train)
+                .WithMany()
+                .HasForeignKey(w => w.TrainID)
+                .OnDelete(DeleteBehavior.Restrict); // ❗ Changed
+
+            modelBuilder.Entity<WaitingList>()
+                .HasOne(w => w.ClassType)
+                .WithMany()
+                .HasForeignKey(w => w.ClassTypeID)
+                .OnDelete(DeleteBehavior.Restrict); // ❗ Changed
+
+            modelBuilder.Entity<WaitingList>()
+                .HasOne(w => w.Passenger)
+                .WithMany()
+                .HasForeignKey(w => w.PassengerID)
+                .OnDelete(DeleteBehavior.Cascade);
+            // base.OnModelCreating(modelBuilder);
+            // modelBuilder.Entity<WaitingList>()
+            //     .HasOne(w => w.Ticket)
+            //     .WithMany(t => t.WaitingLists)
+            //     .HasForeignKey(w => w.TicketID)
+            //     .OnDelete(DeleteBehavior.Restrict);
+
+            // modelBuilder.Entity<WaitingList>()
+            //     .HasOne(w => w.Train)
+            //     .WithMany()
+            //     .HasForeignKey(w => w.TrainID)
+            //     .OnDelete(DeleteBehavior.Cascade);
+
+            // modelBuilder.Entity<WaitingList>()
+            //     .HasOne(w => w.ClassType)
+            //     .WithMany()
+            //     .HasForeignKey(w => w.ClassTypeID)
+            //     .OnDelete(DeleteBehavior.Cascade);
+
+            // modelBuilder.Entity<WaitingList>()
+            //     .HasOne(w => w.Passenger)
+            //     .WithMany()
+            //     .HasForeignKey(w => w.PassengerID)
+            //     .OnDelete(DeleteBehavior.Cascade);
+
+            // modelBuilder.Entity<Ticket>()
+            //     .HasOne(t => t.SourceStation)
+            //     .WithMany()
+            //     .HasForeignKey(t => t.SourceID)
+            //     .OnDelete(DeleteBehavior.Restrict); // or NoAction
+
+            // modelBuilder.Entity<Ticket>()
+            //     .HasOne(t => t.DestinationStation)
+            //     .WithMany()
+            //     .HasForeignKey(t => t.DestinationID)
+            //     .OnDelete(DeleteBehavior.Restrict);
         }
 
 
@@ -63,6 +98,7 @@ namespace RailwayManagementApi.Data
         public DbSet<Payment> Payments { get; set; }
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<WaitingList> WaitingLists { get; set; }
+        public DbSet<Refund> Refunds { get; set; }
 
     }
 }

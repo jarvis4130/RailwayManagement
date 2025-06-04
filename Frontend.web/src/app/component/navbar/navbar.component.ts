@@ -19,7 +19,8 @@ export class NavbarComponent {
   }
 
   logout() {
-    localStorage.removeItem('token');
+    this.auth.logout();
+    // localStorage.removeItem('token');
     this.router.navigate(['/home']);
   }
 }

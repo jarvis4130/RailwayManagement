@@ -1,3 +1,4 @@
+using System.Net;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using RailwayManagementApi.DTOs;
@@ -9,13 +10,16 @@ public class AuthService : IAuthService
 {
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly JwtHelper _jwtHelper;
+    private readonly INotificationService _notificationService;
 
     public AuthService(
         UserManager<ApplicationUser> userManager,
-        JwtHelper jwtHelper)
+        JwtHelper jwtHelper,
+        INotificationService notificationService)
     {
         _userManager = userManager;
         _jwtHelper = jwtHelper;
+        _notificationService = notificationService;
     }
 
     public async Task<AuthResponseDTO> RegisterAsync(RegisterDTO dto)
@@ -77,5 +81,29 @@ public class AuthService : IAuthService
             Username = user.UserName,
             Role = roles.FirstOrDefault() ?? "User"
         };
+    }
+
+    public async Task<bool> SendForgotPasswordEmailAsync(string email)
+    {
+        var user = await _userManager.FindByEmailAsync(email);
+        if (user == null)
+            return false;
+
+        var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+        var encodedToken = WebUtility.UrlEncode(token);
+        await _notificationService.SendResetEmailAsync(user.Email, encodedToken);
+        return true;
+    }
+
+    public async Task<(bool Succeeded, IEnumerable<string> Errors)> ResetPasswordAsync(string email, string token, string newPassword)
+    {
+        var user = await _userManager.FindByEmailAsync(email);
+        if (user == null)
+            return (false, new[] { "User not found." });
+
+        var decodedToken = WebUtility.UrlDecode(token);
+        var result = await _userManager.ResetPasswordAsync(user, decodedToken, newPassword);
+
+        return (result.Succeeded, result.Errors.Select(e => e.Description));
     }
 }

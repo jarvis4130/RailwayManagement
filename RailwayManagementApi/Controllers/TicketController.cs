@@ -26,7 +26,7 @@ namespace RailwayManagementApi.Controllers
             _ticketService = ticketService;
             _dbContext = context;
             _notificationService = notificationService;
-            _userManager=userManager;
+            _userManager = userManager;
         }
 
         // {
@@ -85,12 +85,33 @@ namespace RailwayManagementApi.Controllers
         public async Task<IActionResult> ConfirmPaymentAndBookTicket([FromBody] PaymentConfirmationDTO paymentDto)
             => await _ticketService.ConfirmPaymentAndBookTicket(paymentDto);
 
+        // [HttpPost("cancel-passenger")]
+        // public async Task<IActionResult> CancelPassenger([FromBody] CancelPassengerDTO dto)
+        // {
+        //     return await _ticketService.CancelPassengerAsync(dto);
+        // }
         [HttpPost("cancel-passenger")]
-        public async Task<IActionResult> CancelPassenger([FromBody] CancelPassengerDTO dto)
+        public async Task<IActionResult> CancelPassenger(CancelPassengerDTO dto)
         {
-            return await _ticketService.CancelPassengerAsync(dto);
-        }
+            var result = await _ticketService.CancelPassengerAsync(dto);
 
+            if (result.IsNotFound)
+                return NotFound(result.Message);
+
+            if (result.IsError)
+                return BadRequest(result.Message + " Details: " + result.ErrorDetails);
+
+            if (result.Success)
+                return Ok(new
+                {
+                    Message = result.Message,
+                    Refund = result.RefundAmount,
+                    Currency = result.Currency,
+                    Note = result.Note
+                });
+
+            return BadRequest("Unknown error occurred.");
+        }
         // [HttpGet("test")]
         // public async Task<IActionResult> SendEmail()
         // {
