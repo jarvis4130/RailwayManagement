@@ -19,14 +19,13 @@ namespace RailwayManagementApi.Controllers
         private readonly ITicketService _ticketService;
         private readonly RailwayContext _dbContext;
         private readonly INotificationService _notificationService;
-        private readonly UserManager<ApplicationUser> _userManager;
+
 
         public TicketController(ITicketService ticketService, RailwayContext context, INotificationService notificationService, UserManager<ApplicationUser> userManager)
         {
             _ticketService = ticketService;
             _dbContext = context;
             _notificationService = notificationService;
-            _userManager = userManager;
         }
 
         // {
@@ -85,11 +84,8 @@ namespace RailwayManagementApi.Controllers
         public async Task<IActionResult> ConfirmPaymentAndBookTicket([FromBody] PaymentConfirmationDTO paymentDto)
             => await _ticketService.ConfirmPaymentAndBookTicket(paymentDto);
 
-        // [HttpPost("cancel-passenger")]
-        // public async Task<IActionResult> CancelPassenger([FromBody] CancelPassengerDTO dto)
-        // {
-        //     return await _ticketService.CancelPassengerAsync(dto);
-        // }
+
+        [Authorize]
         [HttpPost("cancel-passenger")]
         public async Task<IActionResult> CancelPassenger(CancelPassengerDTO dto)
         {
@@ -112,32 +108,6 @@ namespace RailwayManagementApi.Controllers
 
             return BadRequest("Unknown error occurred.");
         }
-        // [HttpGet("test")]
-        // public async Task<IActionResult> SendEmail()
-        // {
-        //     string toEmail = "atharvaadam413@gmail.com";  // Replace with test email
-        //     string subject = "Test Email from Swagger";
-        //     string body = "<h2>This is a test email</h2><p>Triggered via <strong>Swagger UI</strong>.</p>";
-        //     await _notificationService.SendEmailAsync(toEmail,subject,body);
-        //     return Ok();
-        // }
-
-
-        // public async Task<WaitingListDto?> GetWaitingListForTicketAsync(int ticketId)
-        // {
-        //     return await _dbContext.WaitingLists
-        //         .Where(w => w.TicketID == ticketId)
-        //         .Select(w => new WaitingListDto
-        //         {
-        //             WaitingListID = w.WaitingListID,
-        //             TicketID = w.TicketID,
-        //             TrainID = w.TrainID,
-        //             ClassTypeID = w.ClassTypeID,
-        //             RequestDate = w.RequestDate,
-        //             Position = w.Position
-        //         })
-        //         .FirstOrDefaultAsync();
-        // }
 
         [Authorize]
         [HttpGet("details/{ticketId}")]
@@ -150,54 +120,14 @@ namespace RailwayManagementApi.Controllers
         [HttpPost("user-tickets")]
         public async Task<IActionResult> GetUserTickets([FromBody] TicketRequestDto request)
         {
-            var user = await _userManager.FindByNameAsync(request.Username);
-            if (user == null)
-                return NotFound("User not found");
+            var tickets = await _ticketService.GetUserTicketsAsync(request);
 
-            var userId = user.Id;
-
-            var tickets = await _dbContext.Tickets
-                .Include(t => t.Passengers)
-                .Include(t => t.Train)
-                .Include(t => t.SourceStation)
-                .Include(t => t.DestinationStation)
-                .Include(t => t.ClassType)
-                .Where(t => t.UserId == userId)
-                .ToListAsync();
-
-            var schedules = await _dbContext.TrainSchedules.ToListAsync();
-
-            var response = tickets.Select(t =>
+            if (!tickets.Any()) // If no tickets are found, return 404 Not Found
             {
-                var departure = schedules.FirstOrDefault(s => s.TrainID == t.TrainID && s.StationID == t.SourceID);
-                var arrival = schedules.FirstOrDefault(s => s.TrainID == t.TrainID && s.StationID == t.DestinationID);
+                return NotFound(new { message = "User not found" });
+            }
 
-                var departureTime = departure?.DepartureTime ?? DateTime.MinValue;
-                var arrivalTime = arrival?.ArrivalTime ?? DateTime.MinValue;
-                var durationMinutes = (int)(arrivalTime - departureTime).TotalMinutes;
-
-                return new
-                {
-                    t.TicketID,
-                    t.JourneyDate,
-                    t.BookingDate,
-                    t.Status,
-                    t.Fare,
-                    Class = t.ClassType.ClassName,
-                    Source = t.SourceStation.StationName,
-                    Destination = t.DestinationStation.StationName,
-                    DepartureTime = departureTime.ToString("HH:mm"),
-                    ArrivalTime = arrivalTime.ToString("HH:mm"),
-                    DurationMinutes = durationMinutes,
-                    Passengers = t.Passengers.Select(p => new
-                    {
-                        p.PassengerID,
-                        Info = $"{p.Name} ({p.Age}, {p.Gender})"
-                    }).ToList()
-                };
-            });
-
-            return Ok(response);
+            return Ok(tickets);
         }
     }
 }

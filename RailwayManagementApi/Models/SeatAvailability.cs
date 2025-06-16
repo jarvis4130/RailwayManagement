@@ -19,6 +19,9 @@ namespace RailwayManagementApi.Models
 
         public int RemainingSeats { get; set; }
 
+        // public int LadiesQuotaSeats { get; set; }
+        // public int BookedLadiesSeats { get; set; }
+
         [ForeignKey("TrainID")]
         public Train Train { get; set; } = null!;
 

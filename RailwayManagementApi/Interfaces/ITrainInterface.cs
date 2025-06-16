@@ -20,5 +20,7 @@ namespace RailwayManagementApi.Services
         List<TrainScheduleDTO> GetScheduleByTrainAndDate(int trainId, DateTime date);
 
         Task UpdateTrainScheduleAsync(UpdateScheduleDto dto);
+
+        Task<bool> DeleteScheduleAsync(int trainId, DateTime arrivalDate);
     }
 }

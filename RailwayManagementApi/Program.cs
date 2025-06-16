@@ -9,6 +9,7 @@ using RailwayManagementApi.Models;
 using Microsoft.AspNetCore.Identity;
 using RailwayManagementApi.Services;
 using Microsoft.OpenApi.Models;
+using System.Text.Json.Serialization;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -88,7 +89,14 @@ builder.Services.AddSwaggerGen(c =>
 
 
 // Add services to the container.
-builder.Services.AddControllers();
+// builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
+        options.JsonSerializerOptions.WriteIndented = true;
+    });
+
 
 // Add CORS policy
 builder.Services.AddCors(options =>

@@ -54,6 +54,7 @@ namespace RailwayManagementApi.Controllers
                 return BadRequest(new { error = ex.Message });
             }
         }
+        
         [HttpPost("forgot-password")]
         public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto dto)
         {

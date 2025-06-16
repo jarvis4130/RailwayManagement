@@ -2,16 +2,22 @@ using Microsoft.EntityFrameworkCore;
 using RailwayManagementApi.Data;
 using RailwayManagementApi.DTOs;
 using RailwayManagementApi.Models;
+using RailwayManagementApi.Helper;
+using RailwayManagementApi.Interfaces;
 
 namespace RailwayManagementApi.Services
 {
     public class TrainService : ITrainService
     {
         private readonly RailwayContext _dbContext;
+        private readonly TicketHelper _ticketHelper;
+        private readonly INotificationService _notificationService;
 
-        public TrainService(RailwayContext dbContext)
+        public TrainService(RailwayContext dbContext, TicketHelper ticketHelper, INotificationService notificationService)
         {
             _dbContext = dbContext;
+            _ticketHelper = ticketHelper;
+            _notificationService = notificationService;
         }
 
         public async Task<List<TrainDTO>> SearchTrainsAsync(TrainSearchDTO searchDto)
@@ -305,6 +311,24 @@ namespace RailwayManagementApi.Services
             return train;
         }
 
+        // public async Task<TrainSchedule> AddScheduleAsync(TrainScheduleDTO dto)
+        // {
+        //     var schedule = new TrainSchedule
+        //     {
+        //         TrainID = dto.TrainID,
+        //         StationID = dto.StationID,
+        //         ArrivalTime = dto.ArrivalTime,
+        //         DepartureTime = dto.DepartureTime,
+        //         SequenceOrder = dto.SequenceOrder,
+        //         Fair = dto.Fair,
+        //         DistanceFromSource = dto.DistanceFromSource
+        //     };
+
+        //     _dbContext.TrainSchedules.Add(schedule);
+        //     await _dbContext.SaveChangesAsync();
+        //     return schedule;
+        // }
+
         public async Task<TrainSchedule> AddScheduleAsync(TrainScheduleDTO dto)
         {
             var schedule = new TrainSchedule
@@ -320,8 +344,41 @@ namespace RailwayManagementApi.Services
 
             _dbContext.TrainSchedules.Add(schedule);
             await _dbContext.SaveChangesAsync();
+
+            // 🔥 Add seat availability for that train and date (only if it's the first station)
+            if (dto.SequenceOrder == 1)
+            {
+                var travelDate = dto.ArrivalTime.Date;
+
+                // Check if seat availability already exists for this train and date
+                bool availabilityExists = _dbContext.SeatAvailabilities
+                    .Any(sa => sa.TrainID == dto.TrainID && sa.Date == travelDate);
+
+                if (!availabilityExists)
+                {
+                    for (int classTypeId = 1; classTypeId <= 4; classTypeId++)
+                    {
+                        int totalSeats = _ticketHelper.GetTotalSeatsForClass(dto.TrainID, classTypeId);
+                        if (totalSeats == 0) continue;
+
+                        var seatAvailability = new SeatAvailability
+                        {
+                            TrainID = dto.TrainID,
+                            Date = travelDate,
+                            ClassTypeID = classTypeId,
+                            RemainingSeats = totalSeats
+                        };
+
+                        _dbContext.SeatAvailabilities.Add(seatAvailability);
+                    }
+
+                    await _dbContext.SaveChangesAsync();
+                }
+            }
+
             return schedule;
         }
+
 
         public List<int> GetTrainIdsByDate(string date)
         {
@@ -352,8 +409,31 @@ namespace RailwayManagementApi.Services
                 .ToList();
         }
 
+        // public async Task UpdateTrainScheduleAsync(UpdateScheduleDto dto)
+        // {
+        //     foreach (var stop in dto.Schedules)
+        //     {
+        //         var existing = await _dbContext.TrainSchedules.FirstOrDefaultAsync(s =>
+        //             s.TrainID == dto.TrainID &&
+        //             s.StationID == stop.StationID &&
+        //             s.ArrivalTime.Date == dto.Date.Date);
+
+        //         if (existing != null)
+        //         {
+        //             existing.ArrivalTime = stop.ArrivalTime;
+        //             existing.DepartureTime = stop.DepartureTime;
+        //             existing.SequenceOrder = stop.SequenceOrder;
+        //             existing.Fair = stop.Fare;
+        //             existing.DistanceFromSource = stop.DistanceFromSource;
+        //         }
+        //     }
+
+        //     await _dbContext.SaveChangesAsync();
+        // }
         public async Task UpdateTrainScheduleAsync(UpdateScheduleDto dto)
         {
+            bool scheduleChanged = false;
+
             foreach (var stop in dto.Schedules)
             {
                 var existing = await _dbContext.TrainSchedules.FirstOrDefaultAsync(s =>
@@ -363,15 +443,82 @@ namespace RailwayManagementApi.Services
 
                 if (existing != null)
                 {
-                    existing.ArrivalTime = stop.ArrivalTime;
-                    existing.DepartureTime = stop.DepartureTime;
-                    existing.SequenceOrder = stop.SequenceOrder;
-                    existing.Fair = stop.Fare;
-                    existing.DistanceFromSource = stop.DistanceFromSource;
+                    // Check if any changes were made
+                    if (existing.ArrivalTime != stop.ArrivalTime ||
+                        existing.DepartureTime != stop.DepartureTime ||
+                        existing.SequenceOrder != stop.SequenceOrder ||
+                        existing.Fair != stop.Fare ||
+                        existing.DistanceFromSource != stop.DistanceFromSource)
+                    {
+                        existing.ArrivalTime = stop.ArrivalTime;
+                        existing.DepartureTime = stop.DepartureTime;
+                        existing.SequenceOrder = stop.SequenceOrder;
+                        existing.Fair = stop.Fare;
+                        existing.DistanceFromSource = stop.DistanceFromSource;
+                        scheduleChanged = true;
+                    }
                 }
             }
 
-            await _dbContext.SaveChangesAsync();
+            if (scheduleChanged)
+            {
+                await _dbContext.SaveChangesAsync();
+
+                // Notify users whose tickets are for the affected train and date
+                var usersToNotify = await _dbContext.Tickets
+                    .Where(t => t.TrainID == dto.TrainID && t.JourneyDate.Date == dto.Date.Date)
+                    .Select(t => new
+                    {
+                        t.User.Email,
+                        t.User.UserName,
+                        t.Train.TrainName,
+                        t.JourneyDate
+                    })
+                    .Distinct()
+                    .ToListAsync();
+
+                foreach (var user in usersToNotify)
+                {
+                    string subject = $"Train Schedule Updated - {user.TrainName}";
+                    string body = $@"
+                <p>Dear {user.UserName},</p>
+                <p>Please be informed that the schedule for your booked train <strong>{user.TrainName}</strong> on <strong>{user.JourneyDate:dd MMM yyyy}</strong> has been updated.</p>
+                <p>We recommend you to review the updated timings before your journey.</p>
+                <p>Regards,<br/>Railway Management Team</p>";
+
+                    await _notificationService.SendEmailAsync(user.Email, subject, body);
+                }
+            }
         }
+
+        public async Task<bool> DeleteScheduleAsync(int trainId, DateTime arrivalDate)
+        {
+            var targetDate = arrivalDate.Date;
+
+            // Get all schedules for that train on that specific date
+            var schedules = await _dbContext.TrainSchedules
+                .Where(s => s.TrainID == trainId && s.ArrivalTime.Date == targetDate)
+                .ToListAsync();
+
+            if (!schedules.Any())
+                return false;
+
+            // Delete schedules
+            _dbContext.TrainSchedules.RemoveRange(schedules);
+
+            // Delete seat availability for that train on that specific date
+            var seatAvailabilities = await _dbContext.SeatAvailabilities
+                .Where(sa => sa.TrainID == trainId && sa.Date == targetDate)
+                .ToListAsync();
+
+            if (seatAvailabilities.Any())
+            {
+                _dbContext.SeatAvailabilities.RemoveRange(seatAvailabilities);
+            }
+
+            await _dbContext.SaveChangesAsync();
+            return true;
+        }
+
     }
 }

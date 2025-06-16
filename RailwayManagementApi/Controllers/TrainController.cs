@@ -140,5 +140,16 @@ namespace RailwayManagementApi.Controllers
             return Ok(new { message = "Schedule updated successfully" });
         }
 
+        [Authorize(Roles = "Admin")]
+        [HttpDelete("delete")]
+        public async Task<IActionResult> DeleteSchedule(int trainId, DateTime arrivalDate)
+        {
+            var result = await _trainService.DeleteScheduleAsync(trainId, arrivalDate);
+
+            if (!result)
+                return NotFound(new { message = "Schedule not found for the given TrainID, StationID, and ArrivalDate." });
+
+            return Ok(new { message = "Schedule deleted successfully." });;
+        }
     }
 }

@@ -189,7 +189,9 @@ export class AddScheduleComponent implements OnInit {
       forkJoin(requests).subscribe({
         next: () => {
           alert('✅ All stops scheduled successfully!');
-          this.router.navigate(['/admin/dashboard']); 
+          this.form.reset(); // 💡 Reset form
+          this.schedules.clear(); // 💡 Clear all stop fields
+          this.router.navigate(['/admin/dashboard']);
         },
         error: (err) => console.error('❌ Error scheduling stops:', err),
       });

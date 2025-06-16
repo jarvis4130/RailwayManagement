@@ -16,6 +16,7 @@ import { AddScheduleComponent } from './pages/addschedule/addschedule.component'
 import { UpdateTrainComponent } from './pages/update-train/update-train.component';
 import { ForgotPasswordComponent } from './pages/forgot-password/forgot-password.component';
 import { ResetPasswordComponent } from './pages/reset-password/reset-password.component';
+import { DeleteTrainComponent } from './pages/delete-train/delete-train.component';
 
 export const routes: Routes = [
   {
@@ -86,7 +87,10 @@ export const routes: Routes = [
       {
         path: 'update-train-schedule',
         component: UpdateTrainComponent,
-      },
+      },{
+        path:"delete-train-schedule",
+        component:DeleteTrainComponent,
+      }
     ],
   },
   {

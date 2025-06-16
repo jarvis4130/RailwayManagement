@@ -1,4 +1,5 @@
 
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using RailwayManagementApi.Data;
@@ -19,13 +20,15 @@ namespace RailwayManagementApi.Services
         private readonly IConfiguration _config;
 
         private readonly INotificationService _notificationService;
+        private readonly UserManager<ApplicationUser> _userManager;
 
-        public TicketService(INotificationService notificationService, RailwayContext dbContext, TicketHelper ticketHelper, IConfiguration config)
+        public TicketService(INotificationService notificationService, RailwayContext dbContext, TicketHelper ticketHelper, IConfiguration config,UserManager<ApplicationUser> userManager)
         {
             _dbContext = dbContext;
             _ticketHelper = ticketHelper;
             _config = config;
             _notificationService = notificationService;
+            _userManager = userManager;
         }
 
         public async Task<IActionResult> InitiateBookingAsync(TicketBookingRequestDTO booking)
@@ -797,7 +800,7 @@ namespace RailwayManagementApi.Services
                             Type = "Ticket Confirmed",
                             Message = $"Your waiting ticket (ID: {waitingTicket.TicketID}) has been confirmed. Seat Number: {promotedPassenger.SeatNumber}."
                         };
-                        await _notificationService.SendEmailAsync(user.Email, notification.Type,notification.Message);
+                        await _notificationService.SendEmailAsync(user.Email, notification.Type, notification.Message);
                         _dbContext.Notifications.Add(notification);
                     }
                 }
@@ -876,6 +879,58 @@ namespace RailwayManagementApi.Services
         }
 
 
+
+        public async Task<IEnumerable<object>> GetUserTicketsAsync(TicketRequestDto request)
+        {
+            var user = await _userManager.FindByNameAsync(request.Username);
+            if (user == null)
+                return Enumerable.Empty<object>();
+
+            var userId = user.Id;
+
+            var tickets = await _dbContext.Tickets
+                .Include(t => t.Passengers)
+                .Include(t => t.Train)
+                .Include(t => t.SourceStation)
+                .Include(t => t.DestinationStation)
+                .Include(t => t.ClassType)
+                .Where(t => t.UserId == userId)
+                .ToListAsync();
+
+            var schedules = await _dbContext.TrainSchedules.ToListAsync();
+
+            var response = tickets.Select(t =>
+            {
+                var departure = schedules.FirstOrDefault(s => s.TrainID == t.TrainID && s.StationID == t.SourceID);
+                var arrival = schedules.FirstOrDefault(s => s.TrainID == t.TrainID && s.StationID == t.DestinationID);
+
+                var departureTime = departure?.DepartureTime ?? DateTime.MinValue;
+                var arrivalTime = arrival?.ArrivalTime ?? DateTime.MinValue;
+                var durationMinutes = (int)(arrivalTime - departureTime).TotalMinutes;
+
+                return new
+                {
+                    t.TicketID,
+                    t.JourneyDate,
+                    t.BookingDate,
+                    t.Status,
+                    t.Fare,
+                    Class = t.ClassType.ClassName,
+                    Source = t.SourceStation.StationName,
+                    Destination = t.DestinationStation.StationName,
+                    DepartureTime = departureTime.ToString("HH:mm"),
+                    ArrivalTime = arrivalTime.ToString("HH:mm"),
+                    DurationMinutes = durationMinutes,
+                    Passengers = t.Passengers.Select(p => new
+                    {
+                        p.PassengerID,
+                        Info = $"{p.Name} ({p.Age}, {p.Gender})"
+                    }).ToList()
+                };
+            });
+
+            return response;
+        }
 
         public async Task<IActionResult> GetTicketDetailsAsync(int ticketId)
         {

@@ -47,6 +47,15 @@ export class ScheduleService {
       headers: this.getHeaders(),
     });
   }
+
+  deleteSchedule(trainId: number, date: string) {
+    return this.http.delete(
+      `${this.baseUrl}/delete?trainId=${trainId}&arrivalDate=${date}`,
+      {
+        headers: this.getHeaders(),
+      }
+    );
+  }
 }
 export interface TrainScheduleDTO {
   trainID: number;
